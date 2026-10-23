@@ -246,7 +246,7 @@ Every claim carries the query and rows it came from. No number may appear in a c
 
 ## 4. API endpoints (P1)
 
-Fastify on `http://localhost:3000` (`PORT`, web uses `VITE_API_URL`). All JSON. Errors: `{ "error": { "code": "not_found", "message": "..." } }` with a matching HTTP status.
+Fastify on `http://localhost:4000` (3000 is taken by the Zetaris UI) (`PORT`, web uses `VITE_API_URL`). All JSON. Errors: `{ "error": { "code": "not_found", "message": "..." } }` with a matching HTTP status.
 
 Agent runs take a while, so a run starts async and the web polls for it.
 

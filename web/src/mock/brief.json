@@ -1,0 +1,54 @@
+{
+  "run_id": "run_20261001_080000",
+  "generated_at": "2026-10-01T08:00:30Z",
+  "cash_today": 8420,
+  "what_changed": [
+    "Adobe price rose 21% since April",
+    "Invoice inv0031 is now 47 days late"
+  ],
+  "moves": [
+    {
+      "id": "m001",
+      "rank": 1,
+      "title": "Invoice Atlas Co for 22 unbilled hours",
+      "action_type": "bill_hours",
+      "monthly_impact_eur": 1320,
+      "urgency": "high",
+      "reason": "Hours from August and September were logged but never invoiced.",
+      "finding_ids": [
+        "f002"
+      ],
+      "memory_note": null,
+      "status": "pending"
+    },
+    {
+      "id": "m002",
+      "rank": 2,
+      "title": "Send Nordwind Studio a payment reminder",
+      "action_type": "send_reminder",
+      "monthly_impact_eur": 0,
+      "urgency": "high",
+      "reason": "4,800 EUR is owed and invoice inv0031 is 47 days late.",
+      "finding_ids": [
+        "f001"
+      ],
+      "memory_note": null,
+      "status": "pending"
+    },
+    {
+      "id": "m003",
+      "rank": 3,
+      "title": "Cancel the unused Webflow plan",
+      "action_type": "cancel_subscription",
+      "monthly_impact_eur": 29,
+      "urgency": "medium",
+      "reason": "Not opened for 94 days but still charged every month.",
+      "finding_ids": [
+        "f004"
+      ],
+      "memory_note": null,
+      "status": "pending"
+    }
+  ],
+  "findings_count": 6
+}

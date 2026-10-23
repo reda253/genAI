@@ -1,0 +1,172 @@
+[
+  {
+    "id": "f001",
+    "type": "late_payer",
+    "title": "Nordwind Studio pays 47 days late on average",
+    "client_id": "c04",
+    "subscription_id": null,
+    "monthly_impact_eur": 0,
+    "cash_at_risk_eur": 4800,
+    "confidence": "high",
+    "evidence": [
+      {
+        "id": "e001",
+        "view": "ar_aging",
+        "sql": "SELECT invoice_id, amount, days_late FROM ar_aging WHERE client_id = 'c04' AND days_late > 30",
+        "rows": [
+          {
+            "invoice_id": "inv0031",
+            "amount": 2400,
+            "days_late": 47
+          },
+          {
+            "invoice_id": "inv0038",
+            "amount": 2400,
+            "days_late": 33
+          }
+        ],
+        "ran_at": "2026-10-01T08:00:02Z"
+      }
+    ],
+    "detected_at": "2026-10-01T08:00:05Z"
+  },
+  {
+    "id": "f002",
+    "type": "unbilled_hours",
+    "title": "22 hours for Atlas Co were never invoiced",
+    "client_id": "c01",
+    "subscription_id": null,
+    "monthly_impact_eur": 1320,
+    "cash_at_risk_eur": 0,
+    "confidence": "high",
+    "evidence": [
+      {
+        "id": "e002",
+        "view": "client_profitability",
+        "sql": "SELECT month, hours_logged, hours_billed, unbilled_hours FROM client_profitability WHERE client_id = 'c01' AND unbilled_pct > 10",
+        "rows": [
+          {
+            "month": "2026-08-01",
+            "hours_logged": 52,
+            "hours_billed": 40,
+            "unbilled_hours": 12
+          },
+          {
+            "month": "2026-09-01",
+            "hours_logged": 50,
+            "hours_billed": 40,
+            "unbilled_hours": 10
+          }
+        ],
+        "ran_at": "2026-10-01T08:00:02Z"
+      }
+    ],
+    "detected_at": "2026-10-01T08:00:05Z"
+  },
+  {
+    "id": "f003",
+    "type": "price_rise",
+    "title": "Adobe Creative Cloud price rose 21% since April",
+    "client_id": null,
+    "subscription_id": "sub02",
+    "monthly_impact_eur": 14,
+    "cash_at_risk_eur": 0,
+    "confidence": "high",
+    "evidence": [
+      {
+        "id": "e003",
+        "view": "subscription_usage",
+        "sql": "SELECT vendor, first_charge_amount, last_charge_amount, price_change_pct FROM subscription_usage WHERE price_change_pct > 15",
+        "rows": [
+          {
+            "vendor": "Adobe",
+            "first_charge_amount": 66.99,
+            "last_charge_amount": 80.99,
+            "price_change_pct": 20.9
+          }
+        ],
+        "ran_at": "2026-10-01T08:00:02Z"
+      }
+    ],
+    "detected_at": "2026-10-01T08:00:05Z"
+  },
+  {
+    "id": "f004",
+    "type": "unused_subscription",
+    "title": "Webflow not opened for 94 days, still charged",
+    "client_id": null,
+    "subscription_id": "sub05",
+    "monthly_impact_eur": 29,
+    "cash_at_risk_eur": 0,
+    "confidence": "high",
+    "evidence": [
+      {
+        "id": "e004",
+        "view": "subscription_usage",
+        "sql": "SELECT vendor, monthly_cost, days_since_login FROM subscription_usage WHERE days_since_login > 60",
+        "rows": [
+          {
+            "vendor": "Webflow",
+            "monthly_cost": 29,
+            "days_since_login": 94
+          }
+        ],
+        "ran_at": "2026-10-01T08:00:02Z"
+      }
+    ],
+    "detected_at": "2026-10-01T08:00:05Z"
+  },
+  {
+    "id": "f005",
+    "type": "underpriced_service",
+    "title": "Illustration work for Kestrel is 30% under market rate",
+    "client_id": "c07",
+    "subscription_id": null,
+    "monthly_impact_eur": 540,
+    "cash_at_risk_eur": 0,
+    "confidence": "medium",
+    "evidence": [
+      {
+        "id": "e005",
+        "view": "client_profitability",
+        "sql": "SELECT client_name, hourly_rate, market_rate, hours_logged FROM client_profitability WHERE client_id = 'c07' AND month = '2026-09-01'",
+        "rows": [
+          {
+            "client_name": "Kestrel Books",
+            "hourly_rate": 42,
+            "market_rate": 60,
+            "hours_logged": 30
+          }
+        ],
+        "ran_at": "2026-10-01T08:00:02Z"
+      }
+    ],
+    "detected_at": "2026-10-01T08:00:05Z"
+  },
+  {
+    "id": "f006",
+    "type": "duplicate_charge",
+    "title": "Figma charged twice in August",
+    "client_id": null,
+    "subscription_id": "sub03",
+    "monthly_impact_eur": 15,
+    "cash_at_risk_eur": 0,
+    "confidence": "high",
+    "evidence": [
+      {
+        "id": "e006",
+        "view": "subscription_usage",
+        "sql": "SELECT vendor, monthly_cost, max_charges_in_a_month FROM subscription_usage WHERE max_charges_in_a_month > 1",
+        "rows": [
+          {
+            "vendor": "Figma",
+            "monthly_cost": 15,
+            "max_charges_in_a_month": 2
+          }
+        ],
+        "ran_at": "2026-10-01T08:00:02Z"
+      }
+    ],
+    "detected_at": "2026-10-01T08:00:05Z"
+  }
+]

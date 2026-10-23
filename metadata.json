@@ -1,0 +1,10 @@
+{
+  "project": "Ledger Lens",
+  "meterless_engines": [
+    { "engine": "world-model", "file": "backend/src/engines/world-model/", "test": "" },
+    { "engine": "hmem", "file": "backend/src/engines/hmem/", "test": "" },
+    { "engine": "markovian", "file": "backend/src/engines/markovian/", "test": "" }
+  ],
+  "ai_provider": "Meterless Nightshift",
+  "models": []
+}

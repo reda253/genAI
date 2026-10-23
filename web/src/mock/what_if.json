@@ -1,0 +1,95 @@
+{
+  "baseline": {
+    "scenario": {
+      "type": "baseline"
+    },
+    "start_balance": 8420,
+    "months": [
+      {
+        "month": "2026-10-01",
+        "inflow": 6200,
+        "outflow": 4100,
+        "balance": 10520
+      },
+      {
+        "month": "2026-11-01",
+        "inflow": 5800,
+        "outflow": 4150,
+        "balance": 12170
+      },
+      {
+        "month": "2026-12-01",
+        "inflow": 4900,
+        "outflow": 4600,
+        "balance": 12470
+      },
+      {
+        "month": "2027-01-01",
+        "inflow": 5200,
+        "outflow": 4300,
+        "balance": 13370
+      },
+      {
+        "month": "2027-02-01",
+        "inflow": 5600,
+        "outflow": 4200,
+        "balance": 14770
+      },
+      {
+        "month": "2027-03-01",
+        "inflow": 6000,
+        "outflow": 4250,
+        "balance": 16520
+      }
+    ],
+    "min_balance": 10520,
+    "runway_months": null
+  },
+  "scenario": {
+    "scenario": {
+      "type": "lose_client",
+      "client_id": "c01"
+    },
+    "start_balance": 8420,
+    "months": [
+      {
+        "month": "2026-10-01",
+        "inflow": 6200,
+        "outflow": 4100,
+        "balance": 9020
+      },
+      {
+        "month": "2026-11-01",
+        "inflow": 5800,
+        "outflow": 4150,
+        "balance": 9170
+      },
+      {
+        "month": "2026-12-01",
+        "inflow": 4900,
+        "outflow": 4600,
+        "balance": 7970
+      },
+      {
+        "month": "2027-01-01",
+        "inflow": 5200,
+        "outflow": 4300,
+        "balance": 7370
+      },
+      {
+        "month": "2027-02-01",
+        "inflow": 5600,
+        "outflow": 4200,
+        "balance": 7270
+      },
+      {
+        "month": "2027-03-01",
+        "inflow": 6000,
+        "outflow": 4250,
+        "balance": 7520
+      }
+    ],
+    "min_balance": 7270,
+    "runway_months": null
+  }
+}

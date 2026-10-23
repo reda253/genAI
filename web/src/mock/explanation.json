@@ -1,0 +1,58 @@
+{
+  "question": "Why did my margin drop in September?",
+  "summary": "Margin fell mainly because 22 hours for Atlas Co were never invoiced, and Kestrel work is priced under market.",
+  "causes": [
+    {
+      "rank": 1,
+      "cause": "22 unbilled hours for Atlas Co",
+      "amount_eur": 1320,
+      "finding_id": "f002",
+      "evidence": [
+        {
+          "id": "e002",
+          "view": "client_profitability",
+          "sql": "SELECT month, hours_logged, hours_billed, unbilled_hours FROM client_profitability WHERE client_id = 'c01' AND unbilled_pct > 10",
+          "rows": [
+            {
+              "month": "2026-08-01",
+              "hours_logged": 52,
+              "hours_billed": 40,
+              "unbilled_hours": 12
+            },
+            {
+              "month": "2026-09-01",
+              "hours_logged": 50,
+              "hours_billed": 40,
+              "unbilled_hours": 10
+            }
+          ],
+          "ran_at": "2026-10-01T08:00:02Z"
+        }
+      ]
+    },
+    {
+      "rank": 2,
+      "cause": "Kestrel Books billed at 42 EUR/h vs 60 EUR/h market",
+      "amount_eur": 540,
+      "finding_id": "f005",
+      "evidence": [
+        {
+          "id": "e005",
+          "view": "client_profitability",
+          "sql": "SELECT client_name, hourly_rate, market_rate, hours_logged FROM client_profitability WHERE client_id = 'c07' AND month = '2026-09-01'",
+          "rows": [
+            {
+              "client_name": "Kestrel Books",
+              "hourly_rate": 42,
+              "market_rate": 60,
+              "hours_logged": 30
+            }
+          ],
+          "ran_at": "2026-10-01T08:00:02Z"
+        }
+      ]
+    }
+  ],
+  "uncertain": false,
+  "uncertainty_note": null
+}

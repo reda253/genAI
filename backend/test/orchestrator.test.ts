@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createOrchestrator, NoRunYetError, NotFoundError, RunInProgressError } from '../src/agents/orchestrator.ts';
@@ -73,6 +73,15 @@ test('whatIf lose_client lowers balances', async () => {
   const r = await o.whatIf(scenario);
   expect(r.scenario.months[5].balance).toBeLessThan(r.baseline.months[5].balance);
   expect(r.scenario.scenario).toEqual(scenario);
+});
+
+test('unwritable logs dir fails the run instead of crashing, and frees the slot', async () => {
+  const file = join(mkdtempSync(join(tmpdir(), 'orch-')), 'not-a-dir');
+  writeFileSync(file, 'x');
+  const o = createOrchestrator({ llm: fakeLlm, sql: nope, logsDir: file });
+  const { run_id } = o.startRun();
+  expect(await o.wait(run_id)).toMatchObject({ status: 'failed' });
+  expect(() => o.startRun()).not.toThrow(RunInProgressError);
 });
 
 test('getRun unknown id throws NotFoundError', () => {

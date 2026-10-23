@@ -29,6 +29,15 @@ const decisionBody = {
 export function buildServer({ orchestrator: o, checks }: ServerDeps): FastifyInstance {
   const app = Fastify();
   app.register(cors, { origin: 'http://localhost:5173' });
+  // Allow an empty body with content-type: application/json (fetch helpers send it on POST /api/runs).
+  app.addContentTypeParser('application/json', { parseAs: 'string' }, (_req, body, done) => {
+    try {
+      done(null, body ? JSON.parse(body as string) : undefined);
+    } catch (e) {
+      (e as { statusCode?: number }).statusCode = 400;
+      done(e as Error, undefined);
+    }
+  });
 
   app.setErrorHandler((err: any, _req, reply) => {
     const send = (status: number, code: string, extra = {}) =>

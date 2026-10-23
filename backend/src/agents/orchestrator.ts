@@ -74,7 +74,12 @@ export function createOrchestrator(deps: OrchestratorDeps) {
       const status: RunStatus = { run_id, status: 'running', step: null, error: null };
       runs.set(run_id, status);
       running = run_id;
-      done.set(run_id, execute(status));
+      // last-resort catch (e.g. logs dir unwritable): never leak an unhandled rejection or a stuck slot
+      done.set(run_id, execute(status).catch((e: Error) => {
+        Object.assign(status, { status: 'failed', error: e.message });
+        running = null;
+        return status;
+      }));
       return { ...status };
     },
     async wait(runId: string): Promise<RunStatus> {

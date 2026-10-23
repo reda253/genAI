@@ -31,3 +31,7 @@ Thumbs.db
 .idea/
 .vscode/*
 !.vscode/extensions.json
+
+# Superpowers plans and execution workspace (local only)
+docs/superpowers/
+.superpowers/

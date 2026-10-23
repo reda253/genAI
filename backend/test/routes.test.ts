@@ -101,6 +101,13 @@ test('Fastify client errors keep their 4xx status, never 500', async () => {
   expect(badJson.json().error.code).toBe('bad_request');
 });
 
+test('POST /api/runs accepts a JSON content-type with no body (browser fetch helper)', async () => {
+  const { app, orchestrator } = make();
+  const res = await app.inject({ method: 'POST', url: '/api/runs', headers: { 'content-type': 'application/json' } });
+  expect(res.statusCode).toBe(202);
+  await orchestrator.wait(res.json().run_id);
+});
+
 test('POST /api/moves/:id/decision', async () => {
   const { app } = await withRun();
   const ok = await app.inject(post('/api/moves/m001/decision', { decision: 'approve' }));

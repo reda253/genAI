@@ -1,0 +1,1283 @@
+[
+  {
+    "date": "2026-04-01",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 4800.0
+  },
+  {
+    "date": "2026-04-02",
+    "inflow": 0.0,
+    "outflow": 12.0,
+    "net": -12.0,
+    "balance": 4788.0
+  },
+  {
+    "date": "2026-04-03",
+    "inflow": 0.0,
+    "outflow": 850.0,
+    "net": -850.0,
+    "balance": 3938.0
+  },
+  {
+    "date": "2026-04-04",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 3938.0
+  },
+  {
+    "date": "2026-04-05",
+    "inflow": 0.0,
+    "outflow": 66.99,
+    "net": -66.99,
+    "balance": 3871.01
+  },
+  {
+    "date": "2026-04-06",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 3871.01
+  },
+  {
+    "date": "2026-04-07",
+    "inflow": 0.0,
+    "outflow": 180.0,
+    "net": -180.0,
+    "balance": 3691.01
+  },
+  {
+    "date": "2026-04-08",
+    "inflow": 0.0,
+    "outflow": 20.0,
+    "net": -20.0,
+    "balance": 3671.01
+  },
+  {
+    "date": "2026-04-09",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 3671.01
+  },
+  {
+    "date": "2026-04-10",
+    "inflow": 0.0,
+    "outflow": 131.99,
+    "net": -131.99,
+    "balance": 3539.02
+  },
+  {
+    "date": "2026-04-11",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 3539.02
+  },
+  {
+    "date": "2026-04-12",
+    "inflow": 0.0,
+    "outflow": 78.0,
+    "net": -78.0,
+    "balance": 3461.02
+  },
+  {
+    "date": "2026-04-13",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 3461.02
+  },
+  {
+    "date": "2026-04-14",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 3461.02
+  },
+  {
+    "date": "2026-04-15",
+    "inflow": 0.0,
+    "outflow": 1420.0,
+    "net": -1420.0,
+    "balance": 2041.02
+  },
+  {
+    "date": "2026-04-16",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 2041.02
+  },
+  {
+    "date": "2026-04-17",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 2041.02
+  },
+  {
+    "date": "2026-04-18",
+    "inflow": 0.0,
+    "outflow": 130.0,
+    "net": -130.0,
+    "balance": 1911.02
+  },
+  {
+    "date": "2026-04-19",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 1911.02
+  },
+  {
+    "date": "2026-04-20",
+    "inflow": 0.0,
+    "outflow": 115.0,
+    "net": -115.0,
+    "balance": 1796.02
+  },
+  {
+    "date": "2026-04-21",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 1796.02
+  },
+  {
+    "date": "2026-04-22",
+    "inflow": 0.0,
+    "outflow": 12.5,
+    "net": -12.5,
+    "balance": 1783.52
+  },
+  {
+    "date": "2026-04-23",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 1783.52
+  },
+  {
+    "date": "2026-04-24",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 1783.52
+  },
+  {
+    "date": "2026-04-25",
+    "inflow": 0.0,
+    "outflow": 8.0,
+    "net": -8.0,
+    "balance": 1775.52
+  },
+  {
+    "date": "2026-04-26",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 1775.52
+  },
+  {
+    "date": "2026-04-27",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 1775.52
+  },
+  {
+    "date": "2026-04-28",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 1775.52
+  },
+  {
+    "date": "2026-04-29",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 1775.52
+  },
+  {
+    "date": "2026-04-30",
+    "inflow": 9337.0,
+    "outflow": 4966.35,
+    "net": 4370.65,
+    "balance": 6146.17
+  },
+  {
+    "date": "2026-05-01",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 6146.17
+  },
+  {
+    "date": "2026-05-02",
+    "inflow": 0.0,
+    "outflow": 12.0,
+    "net": -12.0,
+    "balance": 6134.17
+  },
+  {
+    "date": "2026-05-03",
+    "inflow": 0.0,
+    "outflow": 850.0,
+    "net": -850.0,
+    "balance": 5284.17
+  },
+  {
+    "date": "2026-05-04",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 5284.17
+  },
+  {
+    "date": "2026-05-05",
+    "inflow": 0.0,
+    "outflow": 66.99,
+    "net": -66.99,
+    "balance": 5217.18
+  },
+  {
+    "date": "2026-05-06",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 5217.18
+  },
+  {
+    "date": "2026-05-07",
+    "inflow": 0.0,
+    "outflow": 180.0,
+    "net": -180.0,
+    "balance": 5037.18
+  },
+  {
+    "date": "2026-05-08",
+    "inflow": 0.0,
+    "outflow": 20.0,
+    "net": -20.0,
+    "balance": 5017.18
+  },
+  {
+    "date": "2026-05-09",
+    "inflow": 0.0,
+    "outflow": 99.0,
+    "net": -99.0,
+    "balance": 4918.18
+  },
+  {
+    "date": "2026-05-10",
+    "inflow": 0.0,
+    "outflow": 131.99,
+    "net": -131.99,
+    "balance": 4786.19
+  },
+  {
+    "date": "2026-05-11",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 4786.19
+  },
+  {
+    "date": "2026-05-12",
+    "inflow": 0.0,
+    "outflow": 29.0,
+    "net": -29.0,
+    "balance": 4757.19
+  },
+  {
+    "date": "2026-05-13",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 4757.19
+  },
+  {
+    "date": "2026-05-14",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 4757.19
+  },
+  {
+    "date": "2026-05-15",
+    "inflow": 0.0,
+    "outflow": 1420.0,
+    "net": -1420.0,
+    "balance": 3337.19
+  },
+  {
+    "date": "2026-05-16",
+    "inflow": 0.0,
+    "outflow": 100.0,
+    "net": -100.0,
+    "balance": 3237.19
+  },
+  {
+    "date": "2026-05-17",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 3237.19
+  },
+  {
+    "date": "2026-05-18",
+    "inflow": 0.0,
+    "outflow": 10.0,
+    "net": -10.0,
+    "balance": 3227.19
+  },
+  {
+    "date": "2026-05-19",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 3227.19
+  },
+  {
+    "date": "2026-05-20",
+    "inflow": 0.0,
+    "outflow": 15.0,
+    "net": -15.0,
+    "balance": 3212.19
+  },
+  {
+    "date": "2026-05-21",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 3212.19
+  },
+  {
+    "date": "2026-05-22",
+    "inflow": 0.0,
+    "outflow": 252.5,
+    "net": -252.5,
+    "balance": 2959.69
+  },
+  {
+    "date": "2026-05-23",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 2959.69
+  },
+  {
+    "date": "2026-05-24",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 2959.69
+  },
+  {
+    "date": "2026-05-25",
+    "inflow": 0.0,
+    "outflow": 8.0,
+    "net": -8.0,
+    "balance": 2951.69
+  },
+  {
+    "date": "2026-05-26",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 2951.69
+  },
+  {
+    "date": "2026-05-27",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 2951.69
+  },
+  {
+    "date": "2026-05-28",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 2951.69
+  },
+  {
+    "date": "2026-05-29",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 2951.69
+  },
+  {
+    "date": "2026-05-30",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 2951.69
+  },
+  {
+    "date": "2026-05-31",
+    "inflow": 8793.0,
+    "outflow": 4966.35,
+    "net": 3826.65,
+    "balance": 6778.34
+  },
+  {
+    "date": "2026-06-01",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 6778.34
+  },
+  {
+    "date": "2026-06-02",
+    "inflow": 0.0,
+    "outflow": 12.0,
+    "net": -12.0,
+    "balance": 6766.34
+  },
+  {
+    "date": "2026-06-03",
+    "inflow": 0.0,
+    "outflow": 850.0,
+    "net": -850.0,
+    "balance": 5916.34
+  },
+  {
+    "date": "2026-06-04",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 5916.34
+  },
+  {
+    "date": "2026-06-05",
+    "inflow": 0.0,
+    "outflow": 80.99,
+    "net": -80.99,
+    "balance": 5835.35
+  },
+  {
+    "date": "2026-06-06",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 5835.35
+  },
+  {
+    "date": "2026-06-07",
+    "inflow": 0.0,
+    "outflow": 180.0,
+    "net": -180.0,
+    "balance": 5655.35
+  },
+  {
+    "date": "2026-06-08",
+    "inflow": 0.0,
+    "outflow": 20.0,
+    "net": -20.0,
+    "balance": 5635.35
+  },
+  {
+    "date": "2026-06-09",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 5635.35
+  },
+  {
+    "date": "2026-06-10",
+    "inflow": 0.0,
+    "outflow": 131.99,
+    "net": -131.99,
+    "balance": 5503.36
+  },
+  {
+    "date": "2026-06-11",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 5503.36
+  },
+  {
+    "date": "2026-06-12",
+    "inflow": 0.0,
+    "outflow": 209.0,
+    "net": -209.0,
+    "balance": 5294.36
+  },
+  {
+    "date": "2026-06-13",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 5294.36
+  },
+  {
+    "date": "2026-06-14",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 5294.36
+  },
+  {
+    "date": "2026-06-15",
+    "inflow": 0.0,
+    "outflow": 1420.0,
+    "net": -1420.0,
+    "balance": 3874.36
+  },
+  {
+    "date": "2026-06-16",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 3874.36
+  },
+  {
+    "date": "2026-06-17",
+    "inflow": 0.0,
+    "outflow": 29.0,
+    "net": -29.0,
+    "balance": 3845.36
+  },
+  {
+    "date": "2026-06-18",
+    "inflow": 0.0,
+    "outflow": 10.0,
+    "net": -10.0,
+    "balance": 3835.36
+  },
+  {
+    "date": "2026-06-19",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 3835.36
+  },
+  {
+    "date": "2026-06-20",
+    "inflow": 0.0,
+    "outflow": 15.0,
+    "net": -15.0,
+    "balance": 3820.36
+  },
+  {
+    "date": "2026-06-21",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 3820.36
+  },
+  {
+    "date": "2026-06-22",
+    "inflow": 0.0,
+    "outflow": 12.5,
+    "net": -12.5,
+    "balance": 3807.86
+  },
+  {
+    "date": "2026-06-23",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 3807.86
+  },
+  {
+    "date": "2026-06-24",
+    "inflow": 0.0,
+    "outflow": 100.0,
+    "net": -100.0,
+    "balance": 3707.86
+  },
+  {
+    "date": "2026-06-25",
+    "inflow": 0.0,
+    "outflow": 8.0,
+    "net": -8.0,
+    "balance": 3699.86
+  },
+  {
+    "date": "2026-06-26",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 3699.86
+  },
+  {
+    "date": "2026-06-27",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 3699.86
+  },
+  {
+    "date": "2026-06-28",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 3699.86
+  },
+  {
+    "date": "2026-06-29",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 3699.86
+  },
+  {
+    "date": "2026-06-30",
+    "inflow": 7537.0,
+    "outflow": 4966.35,
+    "net": 2570.65,
+    "balance": 6270.51
+  },
+  {
+    "date": "2026-07-01",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 6270.51
+  },
+  {
+    "date": "2026-07-02",
+    "inflow": 0.0,
+    "outflow": 12.0,
+    "net": -12.0,
+    "balance": 6258.51
+  },
+  {
+    "date": "2026-07-03",
+    "inflow": 0.0,
+    "outflow": 850.0,
+    "net": -850.0,
+    "balance": 5408.51
+  },
+  {
+    "date": "2026-07-04",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 5408.51
+  },
+  {
+    "date": "2026-07-05",
+    "inflow": 0.0,
+    "outflow": 80.99,
+    "net": -80.99,
+    "balance": 5327.52
+  },
+  {
+    "date": "2026-07-06",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 5327.52
+  },
+  {
+    "date": "2026-07-07",
+    "inflow": 0.0,
+    "outflow": 180.0,
+    "net": -180.0,
+    "balance": 5147.52
+  },
+  {
+    "date": "2026-07-08",
+    "inflow": 0.0,
+    "outflow": 20.0,
+    "net": -20.0,
+    "balance": 5127.52
+  },
+  {
+    "date": "2026-07-09",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 5127.52
+  },
+  {
+    "date": "2026-07-10",
+    "inflow": 0.0,
+    "outflow": 131.99,
+    "net": -131.99,
+    "balance": 4995.53
+  },
+  {
+    "date": "2026-07-11",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 4995.53
+  },
+  {
+    "date": "2026-07-12",
+    "inflow": 0.0,
+    "outflow": 29.0,
+    "net": -29.0,
+    "balance": 4966.53
+  },
+  {
+    "date": "2026-07-13",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 4966.53
+  },
+  {
+    "date": "2026-07-14",
+    "inflow": 0.0,
+    "outflow": 149.0,
+    "net": -149.0,
+    "balance": 4817.53
+  },
+  {
+    "date": "2026-07-15",
+    "inflow": 0.0,
+    "outflow": 1420.0,
+    "net": -1420.0,
+    "balance": 3397.53
+  },
+  {
+    "date": "2026-07-16",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 3397.53
+  },
+  {
+    "date": "2026-07-17",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 3397.53
+  },
+  {
+    "date": "2026-07-18",
+    "inflow": 0.0,
+    "outflow": 110.0,
+    "net": -110.0,
+    "balance": 3287.53
+  },
+  {
+    "date": "2026-07-19",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 3287.53
+  },
+  {
+    "date": "2026-07-20",
+    "inflow": 0.0,
+    "outflow": 315.0,
+    "net": -315.0,
+    "balance": 2972.53
+  },
+  {
+    "date": "2026-07-21",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 2972.53
+  },
+  {
+    "date": "2026-07-22",
+    "inflow": 0.0,
+    "outflow": 12.5,
+    "net": -12.5,
+    "balance": 2960.03
+  },
+  {
+    "date": "2026-07-23",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 2960.03
+  },
+  {
+    "date": "2026-07-24",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 2960.03
+  },
+  {
+    "date": "2026-07-25",
+    "inflow": 0.0,
+    "outflow": 8.0,
+    "net": -8.0,
+    "balance": 2952.03
+  },
+  {
+    "date": "2026-07-26",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 2952.03
+  },
+  {
+    "date": "2026-07-27",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 2952.03
+  },
+  {
+    "date": "2026-07-28",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 2952.03
+  },
+  {
+    "date": "2026-07-29",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 2952.03
+  },
+  {
+    "date": "2026-07-30",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 2952.03
+  },
+  {
+    "date": "2026-07-31",
+    "inflow": 7537.0,
+    "outflow": 4966.35,
+    "net": 2570.65,
+    "balance": 5522.68
+  },
+  {
+    "date": "2026-08-01",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 5522.68
+  },
+  {
+    "date": "2026-08-02",
+    "inflow": 0.0,
+    "outflow": 12.0,
+    "net": -12.0,
+    "balance": 5510.68
+  },
+  {
+    "date": "2026-08-03",
+    "inflow": 0.0,
+    "outflow": 850.0,
+    "net": -850.0,
+    "balance": 4660.68
+  },
+  {
+    "date": "2026-08-04",
+    "inflow": 544.0,
+    "outflow": 0.0,
+    "net": 544.0,
+    "balance": 5204.68
+  },
+  {
+    "date": "2026-08-05",
+    "inflow": 0.0,
+    "outflow": 80.99,
+    "net": -80.99,
+    "balance": 5123.69
+  },
+  {
+    "date": "2026-08-06",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 5123.69
+  },
+  {
+    "date": "2026-08-07",
+    "inflow": 0.0,
+    "outflow": 180.0,
+    "net": -180.0,
+    "balance": 4943.69
+  },
+  {
+    "date": "2026-08-08",
+    "inflow": 0.0,
+    "outflow": 170.0,
+    "net": -170.0,
+    "balance": 4773.69
+  },
+  {
+    "date": "2026-08-09",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 4773.69
+  },
+  {
+    "date": "2026-08-10",
+    "inflow": 0.0,
+    "outflow": 131.99,
+    "net": -131.99,
+    "balance": 4641.7
+  },
+  {
+    "date": "2026-08-11",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 4641.7
+  },
+  {
+    "date": "2026-08-12",
+    "inflow": 0.0,
+    "outflow": 29.0,
+    "net": -29.0,
+    "balance": 4612.7
+  },
+  {
+    "date": "2026-08-13",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 4612.7
+  },
+  {
+    "date": "2026-08-14",
+    "inflow": 0.0,
+    "outflow": 100.0,
+    "net": -100.0,
+    "balance": 4512.7
+  },
+  {
+    "date": "2026-08-15",
+    "inflow": 0.0,
+    "outflow": 1420.0,
+    "net": -1420.0,
+    "balance": 3092.7
+  },
+  {
+    "date": "2026-08-16",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 3092.7
+  },
+  {
+    "date": "2026-08-17",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 3092.7
+  },
+  {
+    "date": "2026-08-18",
+    "inflow": 0.0,
+    "outflow": 10.0,
+    "net": -10.0,
+    "balance": 3082.7
+  },
+  {
+    "date": "2026-08-19",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 3082.7
+  },
+  {
+    "date": "2026-08-20",
+    "inflow": 0.0,
+    "outflow": 15.0,
+    "net": -15.0,
+    "balance": 3067.7
+  },
+  {
+    "date": "2026-08-21",
+    "inflow": 0.0,
+    "outflow": 39.0,
+    "net": -39.0,
+    "balance": 3028.7
+  },
+  {
+    "date": "2026-08-22",
+    "inflow": 0.0,
+    "outflow": 27.5,
+    "net": -27.5,
+    "balance": 3001.2
+  },
+  {
+    "date": "2026-08-23",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 3001.2
+  },
+  {
+    "date": "2026-08-24",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 3001.2
+  },
+  {
+    "date": "2026-08-25",
+    "inflow": 0.0,
+    "outflow": 8.0,
+    "net": -8.0,
+    "balance": 2993.2
+  },
+  {
+    "date": "2026-08-26",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 2993.2
+  },
+  {
+    "date": "2026-08-27",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 2993.2
+  },
+  {
+    "date": "2026-08-28",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 2993.2
+  },
+  {
+    "date": "2026-08-29",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 2993.2
+  },
+  {
+    "date": "2026-08-30",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 2993.2
+  },
+  {
+    "date": "2026-08-31",
+    "inflow": 8612.0,
+    "outflow": 4966.35,
+    "net": 3645.65,
+    "balance": 6638.85
+  },
+  {
+    "date": "2026-09-01",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 6638.85
+  },
+  {
+    "date": "2026-09-02",
+    "inflow": 0.0,
+    "outflow": 12.0,
+    "net": -12.0,
+    "balance": 6626.85
+  },
+  {
+    "date": "2026-09-03",
+    "inflow": 0.0,
+    "outflow": 850.0,
+    "net": -850.0,
+    "balance": 5776.85
+  },
+  {
+    "date": "2026-09-04",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 5776.85
+  },
+  {
+    "date": "2026-09-05",
+    "inflow": 0.0,
+    "outflow": 80.99,
+    "net": -80.99,
+    "balance": 5695.86
+  },
+  {
+    "date": "2026-09-06",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 5695.86
+  },
+  {
+    "date": "2026-09-07",
+    "inflow": 0.0,
+    "outflow": 180.0,
+    "net": -180.0,
+    "balance": 5515.86
+  },
+  {
+    "date": "2026-09-08",
+    "inflow": 0.0,
+    "outflow": 20.0,
+    "net": -20.0,
+    "balance": 5495.86
+  },
+  {
+    "date": "2026-09-09",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 5495.86
+  },
+  {
+    "date": "2026-09-10",
+    "inflow": 0.0,
+    "outflow": 131.99,
+    "net": -131.99,
+    "balance": 5363.87
+  },
+  {
+    "date": "2026-09-11",
+    "inflow": 0.0,
+    "outflow": 235.0,
+    "net": -235.0,
+    "balance": 5128.87
+  },
+  {
+    "date": "2026-09-12",
+    "inflow": 0.0,
+    "outflow": 29.0,
+    "net": -29.0,
+    "balance": 5099.87
+  },
+  {
+    "date": "2026-09-13",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 5099.87
+  },
+  {
+    "date": "2026-09-14",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 5099.87
+  },
+  {
+    "date": "2026-09-15",
+    "inflow": 0.0,
+    "outflow": 1420.0,
+    "net": -1420.0,
+    "balance": 3679.87
+  },
+  {
+    "date": "2026-09-16",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 3679.87
+  },
+  {
+    "date": "2026-09-17",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 3679.87
+  },
+  {
+    "date": "2026-09-18",
+    "inflow": 0.0,
+    "outflow": 10.0,
+    "net": -10.0,
+    "balance": 3669.87
+  },
+  {
+    "date": "2026-09-19",
+    "inflow": 0.0,
+    "outflow": 210.0,
+    "net": -210.0,
+    "balance": 3459.87
+  },
+  {
+    "date": "2026-09-20",
+    "inflow": 0.0,
+    "outflow": 15.0,
+    "net": -15.0,
+    "balance": 3444.87
+  },
+  {
+    "date": "2026-09-21",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 3444.87
+  },
+  {
+    "date": "2026-09-22",
+    "inflow": 0.0,
+    "outflow": 12.5,
+    "net": -12.5,
+    "balance": 3432.37
+  },
+  {
+    "date": "2026-09-23",
+    "inflow": 725.0,
+    "outflow": 100.0,
+    "net": 625.0,
+    "balance": 4057.37
+  },
+  {
+    "date": "2026-09-24",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 4057.37
+  },
+  {
+    "date": "2026-09-25",
+    "inflow": 0.0,
+    "outflow": 8.0,
+    "net": -8.0,
+    "balance": 4049.37
+  },
+  {
+    "date": "2026-09-26",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 4049.37
+  },
+  {
+    "date": "2026-09-27",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 4049.37
+  },
+  {
+    "date": "2026-09-28",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 4049.37
+  },
+  {
+    "date": "2026-09-29",
+    "inflow": 0.0,
+    "outflow": 0.0,
+    "net": 0.0,
+    "balance": 4049.37
+  },
+  {
+    "date": "2026-09-30",
+    "inflow": 9337.0,
+    "outflow": 4966.37,
+    "net": 4370.63,
+    "balance": 8420.0
+  }
+]

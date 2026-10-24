@@ -1,0 +1,103 @@
+{
+  "version": "1.0",
+  "updated": "2026-10-24",
+  "owner": "P2 (Zetaris lead)",
+  "container": "ledger_lens",
+  "demo_date": "2026-10-01",
+  "data_window": { "start": "2026-04-01", "end": "2026-09-30" },
+  "sources": [
+    {
+      "name": "ledger_lens_pg",
+      "type": "postgres",
+      "description": "Synthetic freelancer dataset: 9 clients, 54 invoices, 132 time logs, 168 bank transactions, 10 subscriptions.",
+      "tables": ["clients", "subscriptions", "invoices", "time_logs", "bank_transactions"]
+    },
+    {
+      "name": "fx_rest",
+      "type": "rest",
+      "description": "Public EUR/MAD reference rate (currency-api via jsDelivr), display-only conversion."
+    }
+  ],
+  "views": {
+    "client_profitability": {
+      "description": "One row per client per month. Shows logged vs invoiced hours, unbilled hours and percentage, the client's rate vs market rate, effective realized rate, and revenue invoiced/received.",
+      "grain": ["client_id", "month"],
+      "columns": {
+        "client_id": "Client identifier (c01-c09).",
+        "client_name": "Invented client company name.",
+        "month": "First day of the work month (2026-04-01 to 2026-09-01).",
+        "hours_logged": "Billable hours logged that month.",
+        "hours_billed": "Hours on time logs linked to an invoice.",
+        "unbilled_hours": "hours_logged minus hours_billed; the unbilled-hours leak signal.",
+        "unbilled_pct": "unbilled_hours as a percentage of hours_logged (0-100).",
+        "hourly_rate": "Contracted rate in EUR/hour.",
+        "market_rate": "Typical market rate for the service in EUR/hour.",
+        "effective_rate": "revenue_invoiced divided by hours_logged (EUR/hour actually realized).",
+        "revenue_invoiced": "Invoice amount attributed to the month the work was logged.",
+        "revenue_received": "Client payments attributed to the month the invoice was paid."
+      }
+    },
+    "cash_position": {
+      "description": "One row per day. Daily money in, money out, net movement, and the end-of-day running balance. Includes the 2026-03-31 opening balance in the running total.",
+      "grain": ["date"],
+      "columns": {
+        "date": "Calendar day from 2026-04-01 to 2026-09-30.",
+        "inflow": "Client payments received that day (non-negative).",
+        "outflow": "Money spent that day (non-negative).",
+        "net": "inflow minus outflow (signed).",
+        "balance": "End-of-day cash balance in EUR."
+      }
+    },
+    "subscription_usage": {
+      "description": "One row per subscription. Compares the current list price with the first and last actual charges, measures price change, days since login, duplicate charges in any month, and total charged.",
+      "grain": ["subscription_id"],
+      "columns": {
+        "subscription_id": "Subscription identifier (sub01-sub10).",
+        "vendor": "Vendor name as it appears on the bank statement.",
+        "plan": "Subscription plan name.",
+        "monthly_cost": "Current list price in EUR/month.",
+        "first_charge_amount": "First actual charge in the window in EUR.",
+        "last_charge_amount": "Last actual charge in the window in EUR.",
+        "price_change_pct": "Percentage change from first to last charge; > 15 is the quiet-price-rise signal.",
+        "last_login_date": "Last known login date.",
+        "days_since_login": "Days between last_login_date and the fixed demo date 2026-10-01; > 60 is the unused-subscription signal.",
+        "max_charges_in_a_month": "Largest number of charges in one month; > 1 is the duplicate-charge signal.",
+        "total_charged": "Total charged over the six-month window in EUR."
+      }
+    },
+    "ar_aging": {
+      "description": "One row per invoice. Measures how many days late each invoice is paid (or is overdue at the demo date), buckets it, and carries the invoice status.",
+      "grain": ["invoice_id"],
+      "columns": {
+        "invoice_id": "Invoice identifier (inv0001-inv0054).",
+        "client_id": "Client identifier.",
+        "client_name": "Client company name.",
+        "amount": "Invoice amount in EUR.",
+        "issue_date": "Date the invoice was issued.",
+        "due_date": "Payment due date (issue date plus payment terms).",
+        "paid_date": "Date the invoice was paid, or null if unpaid.",
+        "days_late": "Days between due_date and paid_date (or 2026-10-01 if unpaid); 0 when on time.",
+        "bucket": "on_time | 1-30 | 31-60 | 61-90 | 90+.",
+        "status": "sent | paid | overdue."
+      }
+    },
+    "fx_rates": {
+      "description": "Display-only EUR/MAD reference rate for every date from 2026-03-31 to 2026-10-01. Never used by an agent's money math.",
+      "grain": ["date"],
+      "columns": {
+        "date": "Calendar day covered by the rate.",
+        "base": "Base currency (EUR).",
+        "quote": "Quote currency (MAD).",
+        "rate": "MAD per 1 EUR."
+      }
+    }
+  },
+  "leak_signals": {
+    "unbilled_hours": "client_profitability.unbilled_pct > 10 OR unbilled_hours > 0",
+    "price_rise": "subscription_usage.price_change_pct > 15",
+    "unused_subscription": "subscription_usage.days_since_login > 60",
+    "late_payer": "ar_aging.days_late > 30",
+    "underpriced_service": "client_profitability.hourly_rate < market_rate * 0.9",
+    "duplicate_charge": "subscription_usage.max_charges_in_a_month > 1"
+  }
+}

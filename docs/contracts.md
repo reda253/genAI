@@ -252,7 +252,7 @@ Agent runs take a while, so a run starts async and the web polls for it.
 
 | Method | Path | Body | Returns |
 | --- | --- | --- | --- |
-| GET | `/api/health` | | `{ "ok": true, "zetaris": true, "nightshift": true }` |
+| GET | `/api/health` | | `{ "ok": true, "zetaris": true, "nightshift": true, "nightshift_status": "online" \| "unauthorized" \| "offline" }` (`unauthorized` = show "paste your Nightshift token") |
 | POST | `/api/runs` | | `{ "run_id": "...", "status": "running" }` |
 | GET | `/api/runs/:run_id` | | `{ "run_id", "status": "running" \| "done" \| "failed", "step": "leak_hunter" \| "explainer" \| "forecaster" \| "cfo" \| null, "error": null }` |
 | GET | `/api/brief` | | Brief (latest finished run) |

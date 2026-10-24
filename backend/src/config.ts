@@ -1,6 +1,26 @@
+import { readFileSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
+
+// The runtime writes its token to <stateDir>/proxy-token.
+// ponytail: Windows path verified; macOS/Linux paths are guesses, override with METERLESS_STATE_DIR.
+function defaultStateDir(env: NodeJS.ProcessEnv): string {
+  if (env.LOCALAPPDATA) return join(env.LOCALAPPDATA, 'ai.meterless.runtime');
+  return process.platform === 'darwin'
+    ? join(homedir(), 'Library', 'Application Support', 'ai.meterless.runtime')
+    : join(homedir(), '.local', 'share', 'ai.meterless.runtime');
+}
+
+function readProxyToken(stateDir: string): string {
+  try {
+    return readFileSync(join(stateDir, 'proxy-token'), 'utf8').trim();
+  } catch {
+    return '';
+  }
+}
 
 export interface Config {
   port: number;
@@ -24,7 +44,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     logsDir: root + 'logs',
     meterless: {
       baseUrl: env.METERLESS_BASE_URL ?? 'http://127.0.0.1:8088/v1',
-      token: env.METERLESS_RUNTIME_TOKEN ?? '',
+      token: env.METERLESS_RUNTIME_TOKEN || readProxyToken(env.METERLESS_STATE_DIR ?? defaultStateDir(env)),
       model: env.METERLESS_MODEL ?? 'nvidia/nemotron-3.5-lightning-30b-a3b',
       deepModel: env.METERLESS_DEEP_MODEL ?? 'nvidia/nemotron-3-ultra-550b-a55b',
     },

@@ -1,3 +1,6 @@
+import { mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { loadConfig, loadDotEnv } from '../src/config.ts';
 
 test('defaults when env is empty', () => {
@@ -22,3 +25,11 @@ test('reads values from env', () => {
 });
 
 test('loadDotEnv does not throw', () => expect(() => loadDotEnv()).not.toThrow());
+
+test('token falls back to <stateDir>/proxy-token when env has none', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'state-'));
+  writeFileSync(join(dir, 'proxy-token'), 'file-token\n');
+  expect(loadConfig({ METERLESS_STATE_DIR: dir }).meterless.token).toBe('file-token');
+  expect(loadConfig({ METERLESS_STATE_DIR: dir, METERLESS_RUNTIME_TOKEN: 'env' }).meterless.token).toBe('env');
+  expect(loadConfig({ METERLESS_STATE_DIR: join(dir, 'missing') }).meterless.token).toBe('');
+});

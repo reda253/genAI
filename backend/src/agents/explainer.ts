@@ -2,6 +2,7 @@
 import type { AgentContext, Cause, Explanation, Finding } from './types.ts';
 import { stripReasoning } from '../llm/nightshift.ts';
 import { runExplainerInvestigation } from '../engines/markovianAdapter.ts';
+import { loadPrompt } from './prompts.ts';
 
 /**
  * The model's JSON answer. Nemotron Ultra sometimes writes its reasoning into the reply without a
@@ -104,7 +105,7 @@ and amount_eur must be a number that appears in that finding (its impact or its 
 }`;
 
     const raw = await ctx.llm.chat([
-      { role: 'system', content: 'You are Explainer agent. Return ONLY valid JSON.' },
+      { role: 'system', content: loadPrompt('explainer') },
       { role: 'user', content: prompt },
     ], { model: ctx.deepModel });
 

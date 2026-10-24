@@ -1,5 +1,7 @@
 // Leak Hunter agent (P5): fixed SQL checks over Zetaris views + LLM ranking and descriptions.
 import type { AgentContext, Finding, Evidence } from './types.ts';
+import { extractJson } from './explainer.ts';
+import { loadPrompt } from './prompts.ts';
 
 export const SQL_CHECKS = {
   unbilled_hours: `SELECT client_id, client_name, month, unbilled_hours, unbilled_pct, hourly_rate, effective_rate FROM client_profitability WHERE unbilled_pct > 10 OR unbilled_hours > 0`,
@@ -278,5 +280,29 @@ export async function leakHunter(ctx: AgentContext): Promise<Finding[]> {
     }
   }
 
-  return detectedFindings;
+  return rankFindings(ctx, detectedFindings);
+}
+
+// Nemotron (fast lane) orders the findings by urgency. It only returns ids: every number stays from SQL.
+async function rankFindings(ctx: AgentContext, findings: Finding[]): Promise<Finding[]> {
+  if (findings.length < 2) return findings;
+  const summary = findings.map(({ id, type, title, monthly_impact_eur, cash_at_risk_eur, confidence }) =>
+    ({ id, type, title, monthly_impact_eur, cash_at_risk_eur, confidence }));
+  try {
+    const raw = await ctx.llm.chat([
+      { role: 'system', content: loadPrompt('leak_hunter') },
+      { role: 'user', content: `Findings:\n${JSON.stringify(summary, null, 2)}` },
+    ]);
+    const order = (extractJson(raw) as { order?: unknown })?.order;
+    const byId = new Map(findings.map(f => [f.id, f]));
+    const ranked = Array.isArray(order) ? [...new Set(order.map(String))].flatMap(id => byId.get(id) ?? []) : [];
+    if (ranked.length === 0) {
+      ctx.trace('llm_rejected', { agent: 'leak_hunter', reason: 'ranking cited no known finding id' });
+      return findings;
+    }
+    return [...ranked, ...findings.filter(f => !ranked.includes(f))];
+  } catch (e) {
+    ctx.trace('llm_failed', { agent: 'leak_hunter', error: (e as Error).message });
+    return findings;
+  }
 }

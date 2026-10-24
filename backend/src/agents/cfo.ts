@@ -1,6 +1,7 @@
 // CFO agent (P5): morning brief and top 3 moves ranked by impact and urgency; P4 adds H-MEM memories.
 import type { ActionType, AgentContext, Brief, Explanation, Finding, Forecast, Move, Urgency } from './types.ts';
 import { extractJson } from './explainer.ts';
+import { loadPrompt } from './prompts.ts';
 import { applyMemoriesToMoves } from '../engines/hmemAdapter.ts';
 
 const ACTIONS: ActionType[] = ['bill_hours', 'send_reminder', 'cancel_subscription', 'dispute_charge', 'raise_rate'];
@@ -118,7 +119,7 @@ finding_ids must only contain ids from the findings above.
 }`;
 
     const raw = await ctx.llm.chat([
-      { role: 'system', content: 'You are CFO agent. Output ONLY valid JSON with exactly 3 moves.' },
+      { role: 'system', content: loadPrompt('cfo_rank') },
       { role: 'user', content: prompt },
     ], { model: ctx.deepModel });
 

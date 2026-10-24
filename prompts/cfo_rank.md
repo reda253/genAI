@@ -23,6 +23,7 @@ Your objective is to review detected findings, cash forecasts, and causal explan
 4. **Zero Hallucination Policy:**
    - Do NOT invent invoice numbers, client names, or amounts.
    - Reference the exact `finding_ids` associated with each move.
+   - The backend sets `run_id`, `generated_at`, `cash_today`, move `id`, `rank`, `status` and `findings_count` itself, and sums `monthly_impact_eur` from the cited findings. Moves citing unknown finding ids are rejected.
 5. **Output Format:**
    - Output ONLY valid JSON matching the `Brief` schema below.
    - No conversational explanations outside the JSON.

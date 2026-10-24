@@ -59,11 +59,14 @@ export function applyMemoriesToMoves(
 
   for (const move of updatedMoves) {
     const query = `${move.action_type} ${move.title}`;
-    const result = hmem.query(query, { topN: 2, threshold: 0.05 });
+    // Only decisions about the same kind of action apply (recordDecision tags each memory with its action_type);
+    // similarity alone matched every move to any decision.
+    const matches = hmem.query(query, { topN: 5, threshold: 0.05 }).memories
+      .filter(r => r.memory.tags?.includes('decision') && r.memory.tags.includes(move.action_type));
 
-    if (result.memories.length > 0) {
+    if (matches.length > 0) {
       hasAnyMemory = true;
-      const best = result.memories[0].memory;
+      const best = matches[0].memory;
       const text = (best.content || '').toLowerCase();
 
       if (text.includes('rejected')) {

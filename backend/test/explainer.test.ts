@@ -78,22 +78,23 @@ describe('explainer agent', () => {
     expect(result.causes.every(c => c.evidence.length > 0)).toBe(true);
   });
 
-  const fakeMarkovian = (output: string) => {
+  // Like the real engine: one generator call per chunk; the adapter keeps the model's raw reply.
+  const fakeMarkovian = () => {
     const prompts: string[] = [];
     const markovian = {
       async run(opts: { prompt: string; generator?: (p: string) => Promise<{ text: string }> }) {
         prompts.push(opts.prompt);
-        await opts.generator?.('chunk');
-        return { output, chunks: [{}, {}], totalTokensUsed: 10 };
+        const { text } = (await opts.generator?.('chunk')) ?? { text: '' };
+        return { output: text.split('[STATE_CHECKPOINT]')[0], chunks: [{}], totalTokensUsed: 10 };
       },
     } as unknown as NonNullable<AgentContext['engines']>['markovian'];
     return { markovian, prompts };
   };
 
   it('uses the Markovian investigation answer, grounded, on the deep model', async () => {
-    const { markovian, prompts } = fakeMarkovian(
-      'Chunk 1 notes...\n{"summary": "Atlas hours drove it.", "causes": [{"rank": 1, "cause": "Atlas", "amount_eur": 1320, "finding_id": "f002"}], "uncertain": false}');
-    const { llm, calls } = scriptedLlm('unused');
+    const { markovian, prompts } = fakeMarkovian();
+    const { llm, calls } = scriptedLlm('>> chunk 1\n[STATE_CHECKPOINT]\nCOMPLETED: f002\n[TASK_COMPLETE]\n' +
+      '{"summary": "Atlas hours drove it.", "causes": [{"rank": 1, "cause": "Atlas", "amount_eur": 1320, "finding_id": "f002"}], "uncertain": false}');
     const events: string[] = [];
     const result = await explainer(
       { runId: 'r', llm, deepModel: 'deep-x', sql: () => Promise.reject(new Error('no')), trace: e => { events.push(e); },
@@ -107,10 +108,11 @@ describe('explainer agent', () => {
   });
 
   it('falls back to a direct model call when the Markovian answer has no grounded cause', async () => {
-    const { markovian } = fakeMarkovian('I could not decide.');
-    const { llm } = scriptedLlm(JSON.stringify({
+    const { markovian } = fakeMarkovian();
+    const replies = ['I could not decide.', JSON.stringify({
       summary: 'Direct answer.', causes: [{ rank: 1, cause: 'c', amount_eur: 1320, finding_id: 'f002' }], uncertain: false,
-    }));
+    })];
+    const { llm } = scriptedLlm(() => replies.shift()!); // 1st call = Markovian chunk, 2nd = direct call
     const events: string[] = [];
     const result = await explainer(
       { runId: 'r', llm, sql: () => Promise.reject(new Error('no')), trace: e => { events.push(e); },

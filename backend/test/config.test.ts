@@ -16,11 +16,18 @@ test('reads values from env', () => {
   const c = loadConfig({
     PORT: '5000', METERLESS_BASE_URL: 'http://x/v1', METERLESS_RUNTIME_TOKEN: 't',
     METERLESS_MODEL: 'm', METERLESS_DEEP_MODEL: 'd', ZETARIS_MOCK: '1',
+    ZETARIS_VIEW_SCHEMA: 'custom_schema', ZETARIS_QUERY_LIMIT: '50',
+    ZETARIS_TIMEOUT_MS: '9000',
   });
   expect(c).toMatchObject({
     port: 5000,
     meterless: { baseUrl: 'http://x/v1', token: 't', model: 'm', deepModel: 'd' },
-    zetaris: { mock: true },
+    zetaris: {
+      mock: true,
+      viewSchema: 'custom_schema',
+      queryLimit: 50,
+      timeoutMs: 9000,
+    },
   });
 });
 

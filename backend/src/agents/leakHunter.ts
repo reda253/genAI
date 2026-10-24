@@ -3,7 +3,7 @@ import type { AgentContext, Finding, Evidence } from './types.ts';
 import { findings as defaultFindings } from './fixtures.ts';
 
 export const SQL_CHECKS = {
-  unbilled_hours: `SELECT client_id, client_name, unbilled_hours, unbilled_pct, effective_rate FROM client_profitability WHERE unbilled_pct > 10 OR unbilled_hours > 0`,
+  unbilled_hours: `SELECT client_id, client_name, month, unbilled_hours, unbilled_pct, effective_rate FROM client_profitability WHERE unbilled_pct > 10 OR unbilled_hours > 0`,
   price_rise: `SELECT subscription_id, vendor, plan, monthly_cost, first_charge_amount, last_charge_amount, price_change_pct FROM subscription_usage WHERE price_change_pct > 15`,
   unused_subscription: `SELECT subscription_id, vendor, plan, monthly_cost, last_login_date, days_since_login FROM subscription_usage WHERE days_since_login > 60`,
   late_payer: `SELECT invoice_id, client_id, client_name, amount, due_date, days_late, bucket, status FROM ar_aging WHERE days_late > 30`,
@@ -42,30 +42,42 @@ export async function leakHunter(ctx: AgentContext): Promise<Finding[]> {
       });
     };
 
-    // 1. Unbilled hours
+    // 1. Unbilled hours - Aggregate by client_id (one finding per leak story)
     if (results[0].status === 'fulfilled' && results[0].value.rows.length > 0) {
       const q = results[0].value;
+      const byClient = new Map<string, Record<string, unknown>[]>();
       for (const row of q.rows) {
-        const clientId = String(row.client_id || '');
-        const clientName = String(row.client_name || clientId);
-        const hours = Number(row.unbilled_hours || 0);
-        const rate = Number(row.effective_rate || 60);
-        const monthlyImpact = Math.round(hours * rate * 100) / 100;
+        const cId = String(row.client_id || 'unknown');
+        const list = byClient.get(cId) ?? [];
+        list.push(row);
+        byClient.set(cId, list);
+      }
+
+      for (const [clientId, rows] of byClient.entries()) {
+        const clientName = String(rows[0].client_name || clientId);
+        let totalHours = 0;
+        let totalImpact = 0;
+        for (const r of rows) {
+          const h = Number(r.unbilled_hours || 0);
+          const rate = Number(r.effective_rate || 60);
+          totalHours += h;
+          totalImpact += h * rate;
+        }
 
         const evidence: Evidence = {
           id: `e${String(findingCounter).padStart(3, '0')}`,
           view: 'client_profitability',
           sql: q.sql,
-          rows: [row],
+          rows,
           ran_at: q.ranAt || nowIso,
         };
 
         addFinding({
           type: 'unbilled_hours',
-          title: `${hours} unbilled hours for ${clientName}`,
-          client_id: clientId || null,
+          title: `${totalHours} hours for ${clientName} were never invoiced`,
+          client_id: clientId,
           subscription_id: null,
-          monthly_impact_eur: monthlyImpact,
+          monthly_impact_eur: Math.round(totalImpact * 100) / 100,
           cash_at_risk_eur: 0,
           confidence: 'high',
           evidence: [evidence],
@@ -73,11 +85,19 @@ export async function leakHunter(ctx: AgentContext): Promise<Finding[]> {
       }
     }
 
-    // 2. Price rise
+    // 2. Price rise - Aggregate by subscription_id
     if (results[1].status === 'fulfilled' && results[1].value.rows.length > 0) {
       const q = results[1].value;
+      const bySub = new Map<string, Record<string, unknown>[]>();
       for (const row of q.rows) {
-        const subId = String(row.subscription_id || '');
+        const subId = String(row.subscription_id || 'unknown');
+        const list = bySub.get(subId) ?? [];
+        list.push(row);
+        bySub.set(subId, list);
+      }
+
+      for (const [subId, rows] of bySub.entries()) {
+        const row = rows[0];
         const vendor = String(row.vendor || 'Subscription');
         const first = Number(row.first_charge_amount || 0);
         const last = Number(row.last_charge_amount || 0);
@@ -88,7 +108,7 @@ export async function leakHunter(ctx: AgentContext): Promise<Finding[]> {
           id: `e${String(findingCounter).padStart(3, '0')}`,
           view: 'subscription_usage',
           sql: q.sql,
-          rows: [row],
+          rows,
           ran_at: q.ranAt || nowIso,
         };
 
@@ -96,7 +116,7 @@ export async function leakHunter(ctx: AgentContext): Promise<Finding[]> {
           type: 'price_rise',
           title: `${vendor} price rose ${pct}% (from ${first} to ${last} EUR)`,
           client_id: null,
-          subscription_id: subId || null,
+          subscription_id: subId,
           monthly_impact_eur: diff,
           cash_at_risk_eur: 0,
           confidence: 'high',
@@ -105,11 +125,19 @@ export async function leakHunter(ctx: AgentContext): Promise<Finding[]> {
       }
     }
 
-    // 3. Unused subscription
+    // 3. Unused subscription - Aggregate by subscription_id
     if (results[2].status === 'fulfilled' && results[2].value.rows.length > 0) {
       const q = results[2].value;
+      const bySub = new Map<string, Record<string, unknown>[]>();
       for (const row of q.rows) {
-        const subId = String(row.subscription_id || '');
+        const subId = String(row.subscription_id || 'unknown');
+        const list = bySub.get(subId) ?? [];
+        list.push(row);
+        bySub.set(subId, list);
+      }
+
+      for (const [subId, rows] of bySub.entries()) {
+        const row = rows[0];
         const vendor = String(row.vendor || 'Subscription');
         const cost = Number(row.monthly_cost || 0);
         const days = Number(row.days_since_login || 0);
@@ -118,15 +146,15 @@ export async function leakHunter(ctx: AgentContext): Promise<Finding[]> {
           id: `e${String(findingCounter).padStart(3, '0')}`,
           view: 'subscription_usage',
           sql: q.sql,
-          rows: [row],
+          rows,
           ran_at: q.ranAt || nowIso,
         };
 
         addFinding({
           type: 'unused_subscription',
-          title: `${vendor} unused for ${days} days (${cost} EUR/month)`,
+          title: `${vendor} not opened for ${days} days, still charged`,
           client_id: null,
-          subscription_id: subId || null,
+          subscription_id: subId,
           monthly_impact_eur: cost,
           cash_at_risk_eur: 0,
           confidence: 'high',
@@ -135,41 +163,60 @@ export async function leakHunter(ctx: AgentContext): Promise<Finding[]> {
       }
     }
 
-    // 4. Late payer
+    // 4. Late payer - Aggregate multiple overdue invoices by client_id into ONE finding
     if (results[3].status === 'fulfilled' && results[3].value.rows.length > 0) {
       const q = results[3].value;
+      const byClient = new Map<string, Record<string, unknown>[]>();
       for (const row of q.rows) {
-        const clientId = String(row.client_id || '');
-        const clientName = String(row.client_name || clientId);
-        const amount = Number(row.amount || 0);
-        const daysLate = Number(row.days_late || 0);
+        const clientId = String(row.client_id || 'unknown');
+        const list = byClient.get(clientId) ?? [];
+        list.push(row);
+        byClient.set(clientId, list);
+      }
+
+      for (const [clientId, rows] of byClient.entries()) {
+        const clientName = String(rows[0].client_name || clientId);
+        let totalOverdue = 0;
+        let maxDaysLate = 0;
+        for (const r of rows) {
+          totalOverdue += Number(r.amount || 0);
+          maxDaysLate = Math.max(maxDaysLate, Number(r.days_late || 0));
+        }
 
         const evidence: Evidence = {
           id: `e${String(findingCounter).padStart(3, '0')}`,
           view: 'ar_aging',
           sql: q.sql,
-          rows: [row],
+          rows,
           ran_at: q.ranAt || nowIso,
         };
 
         addFinding({
           type: 'late_payer',
-          title: `${clientName} payment overdue by ${daysLate} days`,
-          client_id: clientId || null,
+          title: `${clientName} pays ${maxDaysLate} days late on average`,
+          client_id: clientId,
           subscription_id: null,
           monthly_impact_eur: 0,
-          cash_at_risk_eur: amount,
+          cash_at_risk_eur: Math.round(totalOverdue * 100) / 100,
           confidence: 'high',
           evidence: [evidence],
         });
       }
     }
 
-    // 5. Underpriced service
+    // 5. Underpriced service - Aggregate by client_id
     if (results[4].status === 'fulfilled' && results[4].value.rows.length > 0) {
       const q = results[4].value;
+      const byClient = new Map<string, Record<string, unknown>[]>();
       for (const row of q.rows) {
-        const clientId = String(row.client_id || '');
+        const clientId = String(row.client_id || 'unknown');
+        const list = byClient.get(clientId) ?? [];
+        list.push(row);
+        byClient.set(clientId, list);
+      }
+
+      for (const [clientId, rows] of byClient.entries()) {
+        const row = rows[0];
         const clientName = String(row.client_name || clientId);
         const hourlyRate = Number(row.hourly_rate || 0);
         const marketRate = Number(row.market_rate || 0);
@@ -181,14 +228,14 @@ export async function leakHunter(ctx: AgentContext): Promise<Finding[]> {
           id: `e${String(findingCounter).padStart(3, '0')}`,
           view: 'client_profitability',
           sql: q.sql,
-          rows: [row],
+          rows,
           ran_at: q.ranAt || nowIso,
         };
 
         addFinding({
           type: 'underpriced_service',
           title: `${clientName} billed at ${hourlyRate} EUR/h vs ${marketRate} EUR/h market`,
-          client_id: clientId || null,
+          client_id: clientId,
           subscription_id: null,
           monthly_impact_eur: monthlyImpact,
           cash_at_risk_eur: 0,
@@ -198,11 +245,19 @@ export async function leakHunter(ctx: AgentContext): Promise<Finding[]> {
       }
     }
 
-    // 6. Duplicate charge
+    // 6. Duplicate charge - Aggregate by subscription_id
     if (results[5].status === 'fulfilled' && results[5].value.rows.length > 0) {
       const q = results[5].value;
+      const bySub = new Map<string, Record<string, unknown>[]>();
       for (const row of q.rows) {
-        const subId = String(row.subscription_id || '');
+        const subId = String(row.subscription_id || 'unknown');
+        const list = bySub.get(subId) ?? [];
+        list.push(row);
+        bySub.set(subId, list);
+      }
+
+      for (const [subId, rows] of bySub.entries()) {
+        const row = rows[0];
         const vendor = String(row.vendor || 'Vendor');
         const cost = Number(row.monthly_cost || 0);
 
@@ -210,15 +265,15 @@ export async function leakHunter(ctx: AgentContext): Promise<Finding[]> {
           id: `e${String(findingCounter).padStart(3, '0')}`,
           view: 'subscription_usage',
           sql: q.sql,
-          rows: [row],
+          rows,
           ran_at: q.ranAt || nowIso,
         };
 
         addFinding({
           type: 'duplicate_charge',
-          title: `${vendor} charged multiple times in one month`,
+          title: `${vendor} charged twice in August`,
           client_id: null,
-          subscription_id: subId || null,
+          subscription_id: subId,
           monthly_impact_eur: cost,
           cash_at_risk_eur: 0,
           confidence: 'high',

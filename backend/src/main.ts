@@ -1,11 +1,20 @@
 import { loadConfig, loadDotEnv } from './config.ts';
-import { createNightshift } from './llm/nightshift.ts';
+import { autoDetect, createNightshift } from './llm/nightshift.ts';
 import { createOrchestrator } from './agents/orchestrator.ts';
 import { buildServer } from './server.ts';
 
 loadDotEnv();
 const config = loadConfig();
-const llm = createNightshift(config.meterless);
+let llm = createNightshift(config.meterless);
+
+// Auto Detect: if the configured runtime is offline, probe the usual ports and use the first hit.
+if ((await llm.status()) === 'offline') {
+  const found = await autoDetect(config.meterless.token);
+  if (found) {
+    console.log(`Nightshift not at ${config.meterless.baseUrl}; auto-detected ${found}`);
+    llm = createNightshift({ ...config.meterless, baseUrl: found });
+  }
+}
 
 const orchestrator = createOrchestrator({
   llm,
@@ -17,7 +26,7 @@ const orchestrator = createOrchestrator({
 const app = buildServer({
   orchestrator,
   checks: {
-    nightshift: () => llm.listModels().then(() => true, () => false),
+    nightshift: () => llm.status(),
     zetaris: () => fetch(config.zetaris.restUrl, { signal: AbortSignal.timeout(3000) }).then(() => true, () => false),
   },
 });

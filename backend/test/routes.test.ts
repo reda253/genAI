@@ -11,7 +11,7 @@ const llm: Llm = { chat: nope, generate: nope, listModels: nope };
 
 function make(agents = {}) {
   const orchestrator = createOrchestrator({ llm, sql: nope, logsDir: mkdtempSync(join(tmpdir(), 'rt-')), agents });
-  const app = buildServer({ orchestrator, checks: { zetaris: async () => false, nightshift: async () => true } });
+  const app = buildServer({ orchestrator, checks: { zetaris: async () => false, nightshift: async () => 'online' } });
   return { app, orchestrator };
 }
 
@@ -27,7 +27,7 @@ const post = (url: string, payload: unknown) => ({ method: 'POST' as const, url,
 test('GET /api/health', async () => {
   const res = await make().app.inject({ url: '/api/health' });
   expect(res.statusCode).toBe(200);
-  expect(res.json()).toEqual({ ok: true, zetaris: false, nightshift: true });
+  expect(res.json()).toEqual({ ok: true, zetaris: false, nightshift: true, nightshift_status: 'online' });
 });
 
 test('before any run: brief, findings, forecast are 404 no_run_yet', async () => {

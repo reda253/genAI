@@ -1,14 +1,17 @@
 import { loadConfig, loadDotEnv } from './config.ts';
 import { createNightshift } from './llm/nightshift.ts';
 import { createOrchestrator } from './agents/orchestrator.ts';
+import { createEngines } from './engines/index.ts';
 import { buildServer } from './server.ts';
 
 loadDotEnv();
 const config = loadConfig();
 const llm = createNightshift(config.meterless);
+const engines = createEngines(llm);
 
 const orchestrator = createOrchestrator({
   llm,
+  engines,
   logsDir: config.logsDir,
   // P2: replace with querySql from ./zetaris/client.ts
   sql: () => Promise.reject(new Error('zetaris client not wired yet (P2)')),

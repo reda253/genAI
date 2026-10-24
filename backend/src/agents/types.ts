@@ -101,4 +101,5 @@ export interface AgentContext {
   llm: Llm;
   sql: (sql: string) => Promise<QueryResult>;
   trace: (event: string, data?: unknown) => void;
+  engines?: import('../engines/index.ts').Engines;
 }

@@ -325,7 +325,7 @@ diff /tmp/run-a /tmp/run-b
 - [ ] Balance is never negative and ends at **€8,420.00** on 2026-09-30.
 - [ ] `data/answer_key.json` has exactly six entries with the values in section 7.
 - [ ] `python data/sanity_checks.py` exits 0.
-- [ ] `python evals/check_findings.py --findings web/src/mock/findings.json` prints **6/6 found, 0 false alarms**.
+- [ ] With the backend running and one run finished (`POST /api/runs`), `python evals/check_findings.py` prints **6/6 found, 0 false alarms**. It reads the real findings from `http://localhost:4000/api/findings` by default; `--findings <file or URL>` overrides that. (`web/src/mock/findings.json` is a fixture, so checking it does not test the agents.)
 - [ ] P2 can connect Zetaris to the database and reproduce the expected view values.
 - [ ] `git tag data-v1` after Sunday's freeze.
 

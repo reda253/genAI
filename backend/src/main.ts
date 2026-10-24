@@ -26,6 +26,7 @@ const orchestrator = createOrchestrator({
   engines,
   logsDir: config.logsDir,
   sql: zetaris.querySql,
+  deepModel: config.meterless.deepModel,
 });
 
 const app = buildServer({

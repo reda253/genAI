@@ -76,7 +76,8 @@ export function createNightshift(cfg: Config['meterless'], fetchImpl: typeof fet
         body: JSON.stringify({
           model: opts.model ?? cfg.model,
           messages,
-          max_tokens: opts.maxTokens ?? 2000, // reasoning eats ~200+ tokens before the answer
+          // Nemotron reasons before answering; on the full findings prompt Lightning needs >2000 or returns empty
+          max_tokens: opts.maxTokens ?? 8000,
           temperature: opts.temperature ?? 0,
         }),
       }, true, CHAT_TIMEOUT_MS);

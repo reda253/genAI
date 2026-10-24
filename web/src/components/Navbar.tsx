@@ -118,14 +118,16 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* System Status Pill (Compact) */}
             <div
               className="hidden xl:flex items-center gap-2 px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 text-[11px] font-mono text-slate-400"
-              title="System Health: Zetaris Semantic Layer + NVIDIA Nemotron Nightshift"
+              title={isMockMode
+                ? 'Mock data: not connected to Zetaris or Nightshift'
+                : 'System Health: Zetaris Semantic Layer + NVIDIA Nemotron Nightshift'}
             >
               <span className="flex items-center gap-1">
                 <Database className="w-3 h-3 text-cyan-400" />
                 <span className="text-slate-300">Zetaris</span>
                 <span
                   className={`w-1.5 h-1.5 rounded-full ${
-                    isMockMode || health?.zetaris ? 'bg-emerald-400' : 'bg-rose-500'
+                    isMockMode ? 'bg-amber-400' : health?.zetaris ? 'bg-emerald-400' : 'bg-rose-500'
                   }`}
                 />
               </span>
@@ -135,7 +137,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <span className="text-slate-300">Nemotron</span>
                 <span
                   className={`w-1.5 h-1.5 rounded-full ${
-                    isMockMode || health?.nightshift ? 'bg-emerald-400' : 'bg-rose-500'
+                    isMockMode ? 'bg-amber-400' : health?.nightshift ? 'bg-emerald-400' : 'bg-rose-500'
                   }`}
                 />
               </span>

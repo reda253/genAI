@@ -53,15 +53,20 @@ export function applyMemoriesToMoves(
   moves: Move[],
 ): Move[] {
   const updatedMoves = moves.map(m => ({ ...m }));
+  // Sort weight only: monthly_impact_eur is money from the findings and is shown to the user, never scaled.
+  const score = new Map(updatedMoves.map(m => [m.id, m.monthly_impact_eur]));
   let hasAnyMemory = false;
 
   for (const move of updatedMoves) {
     const query = `${move.action_type} ${move.title}`;
-    const result = hmem.query(query, { topN: 2, threshold: 0.05 });
+    // Only decisions about the same kind of action apply (recordDecision tags each memory with its action_type);
+    // similarity alone matched every move to any decision.
+    const matches = hmem.query(query, { topN: 5, threshold: 0.05 }).memories
+      .filter(r => r.memory.tags?.includes('decision') && r.memory.tags.includes(move.action_type));
 
-    if (result.memories.length > 0) {
+    if (matches.length > 0) {
       hasAnyMemory = true;
-      const best = result.memories[0].memory;
+      const best = matches[0].memory;
       const text = (best.content || '').toLowerCase();
 
       if (text.includes('rejected')) {
@@ -71,12 +76,12 @@ export function applyMemoriesToMoves(
         if (move.urgency === 'high') move.urgency = 'medium';
         else if (move.urgency === 'medium') move.urgency = 'low';
         // Reduce effective impact score for sorting
-        move.monthly_impact_eur = move.monthly_impact_eur * 0.5;
+        score.set(move.id, move.monthly_impact_eur * 0.5);
       } else if (text.includes('approved')) {
         // User approved before
         move.memory_note = `You previously approved a similar recommendation ("${best.content.slice(0, 80)}..."). Prioritized.`;
         // Boost effective impact score for sorting
-        move.monthly_impact_eur = move.monthly_impact_eur * 1.5;
+        score.set(move.id, move.monthly_impact_eur * 1.5);
       }
     }
   }
@@ -90,7 +95,7 @@ export function applyMemoriesToMoves(
   updatedMoves.sort((a, b) => {
     const uDiff = (urgencyWeight[b.urgency] ?? 0) - (urgencyWeight[a.urgency] ?? 0);
     if (uDiff !== 0) return uDiff;
-    return b.monthly_impact_eur - a.monthly_impact_eur;
+    return score.get(b.id)! - score.get(a.id)!;
   });
 
   // Re-assign ranks 1..N

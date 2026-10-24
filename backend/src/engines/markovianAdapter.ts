@@ -4,6 +4,9 @@ import type { Markovian } from './markovian/index.ts';
 import type { Cause, Explanation, Finding } from '../agents/types.ts';
 
 export interface InvestigationResult {
+  /** The model's investigation text; the Explainer parses and grounds the final JSON from it. */
+  output: string;
+  /** Deterministic summary of the target findings (no model involved). */
   explanation: Explanation;
   chunkCount: number;
   tokensProcessed: number;
@@ -41,11 +44,20 @@ export async function runExplainerInvestigation(
   });
 
   const sourceDocument = hypothesisSections.join('\n\n');
-  const prompt = `Investigate the following question: "${input.question}". Evaluate each hypothesis chunk against the evidence. Carry over established causes and discard unsubstantiated claims.`;
+  const prompt = `Investigate the following question: ${JSON.stringify(input.question)}. Evaluate each hypothesis chunk against the evidence. Carry over established causes and discard unsubstantiated claims.
+When the investigation is complete, end with ONLY this JSON (each cause cites one Finding ID, amount_eur is a number from that finding):
+{"summary": "1-2 sentences", "causes": [{"rank": 1, "cause": "...", "amount_eur": 0.00, "finding_id": "..."}], "uncertain": false, "uncertainty_note": null}`;
 
   // Run through Markovian's chunked loop
+  // Keep the raw replies: the engine's marker cleaner drops everything after the first [STATE_CHECKPOINT],
+  // and Nemotron Ultra often writes every chunk plus the final JSON answer into a single reply.
+  const rawReplies: string[] = [];
   const customGenerator = input.generator
-    ? async (p: string) => ({ text: await input.generator!(p) })
+    ? async (p: string) => {
+        const text = await input.generator!(p);
+        rawReplies.push(text);
+        return { text };
+      }
     : undefined;
 
   const run = await markovian.run({
@@ -82,6 +94,7 @@ export async function runExplainerInvestigation(
   };
 
   return {
+    output: rawReplies.length ? rawReplies.join('\n') : run.output,
     explanation,
     chunkCount: run.chunks.length,
     tokensProcessed: run.totalTokensUsed,

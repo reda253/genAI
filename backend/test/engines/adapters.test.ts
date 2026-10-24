@@ -69,6 +69,42 @@ describe('Meterless Engine Adapters', () => {
     expect(adjustedM003.urgency).toBe('low');
   });
 
+  it('H-MEM: a decision only affects moves of the same action type', () => {
+    const { hmem } = createEngines();
+    const testMoves = structuredClone(moves); // m001 bill_hours, m002 send_reminder, m003 cancel_subscription
+    recordDecision(hmem, testMoves[1], 'reject', 'Not now'); // reject the Nordwind reminder only
+    const reranked = applyMemoriesToMoves(hmem, testMoves);
+    const byId = Object.fromEntries(reranked.map(m => [m.id, m]));
+    expect(byId.m002.memory_note).toContain('previously rejected');
+    expect(byId.m001.memory_note).toBeNull();
+    expect(byId.m003.memory_note).toBeNull();
+    expect(byId.m001.urgency).toBe(moves[0].urgency);
+    expect(byId.m003.urgency).toBe(moves[2].urgency);
+  });
+
+  it('H-MEM: memories re-rank moves but never change the money shown to the user', () => {
+    const { hmem } = createEngines();
+    const testMoves = structuredClone(moves);
+    recordDecision(hmem, testMoves[0], 'reject', null);  // m001 bill_hours 1320
+    recordDecision(hmem, testMoves[2], 'approve', null); // m003 cancel Webflow 29
+    const reranked = applyMemoriesToMoves(hmem, testMoves);
+    for (const m of reranked) {
+      expect(m.monthly_impact_eur).toBe(moves.find(o => o.id === m.id)!.monthly_impact_eur);
+    }
+    expect(reranked.map(m => m.rank)).toEqual([1, 2, 3]);
+  });
+
+  it('Markovian: output keeps the final answer even when the model puts all chunks in one reply', async () => {
+    const { markovian } = createEngines();
+    // What Nemotron Ultra did live: every chunk in one reply, answer after [TASK_COMPLETE]
+    const reply = '>> action: chunk_1\n[STATE_CHECKPOINT]\nCOMPLETED: f002\nREMAINING: none\n' +
+      '[TASK_COMPLETE]\n{"summary": "s", "causes": [{"rank": 1, "cause": "c", "amount_eur": 1320, "finding_id": "f002"}]}';
+    const result = await runExplainerInvestigation(markovian, {
+      question: 'Why?', findingId: null, findings: [findings[1]], generator: async () => reply,
+    });
+    expect(result.output).toContain('"summary": "s"');
+  });
+
   it('Markovian: runs chunked hypothesis investigation with carryover', async () => {
     const { markovian } = createEngines();
 

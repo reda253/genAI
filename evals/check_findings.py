@@ -16,13 +16,17 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import urllib.error
+import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Sequence
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_ANSWER_KEY = ROOT / "data" / "answer_key.json"
-DEFAULT_FINDINGS = ROOT / "web" / "src" / "mock" / "findings.json"
+# The real Leak Hunter output from the running backend. The old default (web/src/mock/findings.json)
+# is a fixture, so the eval passed without testing the agents.
+DEFAULT_FINDINGS = "http://localhost:4000/api/findings"
 
 
 class EvalInputError(Exception):
@@ -44,13 +48,30 @@ class EvalResult:
         return not self.missed and not self.false_alarms
 
 
-def load_json_list(path: str | Path, label: str) -> list[dict[str, Any]]:
-    """Load a JSON array of objects, raising EvalInputError on bad input."""
-    file_path = Path(path)
+def read_source(source: str, label: str) -> str:
+    """Text of a local file, or of an http(s) URL such as the running API's /api/findings."""
+    if source.startswith(("http://", "https://")):
+        try:
+            with urllib.request.urlopen(source, timeout=30) as response:
+                return response.read().decode("utf-8")
+        except urllib.error.HTTPError as exc:
+            hint = " (no finished run yet: POST /api/runs first)" if exc.code == 404 else ""
+            raise EvalInputError(f"{label} URL {source} returned HTTP {exc.code}{hint}") from exc
+        except (urllib.error.URLError, OSError) as exc:
+            raise EvalInputError(
+                f"cannot reach {source}: {exc}. Start the backend (npm run dev in backend/) "
+                f"or pass --findings <file>"
+            ) from exc
     try:
-        raw = file_path.read_text(encoding="utf-8")
+        return Path(source).read_text(encoding="utf-8-sig")
     except OSError as exc:
-        raise EvalInputError(f"cannot read {label} file {file_path}: {exc}") from exc
+        raise EvalInputError(f"cannot read {label} file {source}: {exc}") from exc
+
+
+def load_json_list(path: str | Path, label: str) -> list[dict[str, Any]]:
+    """Load a JSON array of objects from a file or URL, raising EvalInputError on bad input."""
+    file_path = path
+    raw = read_source(str(path), label)
 
     try:
         data = json.loads(raw)
@@ -170,9 +191,8 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument(
         "--findings",
-        type=Path,
         default=DEFAULT_FINDINGS,
-        help=f"findings JSON array (default: {DEFAULT_FINDINGS})",
+        help=f"findings JSON array: a file or an http(s) URL (default: {DEFAULT_FINDINGS})",
     )
     parser.add_argument(
         "--answer-key",

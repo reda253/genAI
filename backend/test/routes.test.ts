@@ -5,12 +5,13 @@ import { buildServer } from '../src/server.ts';
 import { createOrchestrator } from '../src/agents/orchestrator.ts';
 import type { Llm } from '../src/agents/types.ts';
 import { findings } from '../src/agents/fixtures.ts';
+import { mockSql } from './helpers.ts';
 
 const nope = () => Promise.reject(new Error('unused'));
 const llm: Llm = { chat: nope, generate: nope, listModels: nope };
 
 function make(agents = {}) {
-  const orchestrator = createOrchestrator({ llm, sql: nope, logsDir: mkdtempSync(join(tmpdir(), 'rt-')), agents });
+  const orchestrator = createOrchestrator({ llm, sql: mockSql, logsDir: mkdtempSync(join(tmpdir(), 'rt-')), agents });
   const app = buildServer({ orchestrator, checks: { zetaris: async () => false, nightshift: async () => 'online' } });
   return { app, orchestrator };
 }

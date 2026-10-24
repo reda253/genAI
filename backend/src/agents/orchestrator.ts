@@ -20,6 +20,7 @@ export interface OrchestratorDeps {
   agents?: Partial<Agents>;
   now?: () => Date;
   engines?: Engines;
+  deepModel?: string;
 }
 
 export class RunInProgressError extends Error {
@@ -44,7 +45,7 @@ export function createOrchestrator(deps: OrchestratorDeps) {
 
   const ctxFor = (runId: string, step: string | null): AgentContext => {
     const tracer = createTracer(runId, deps.logsDir);
-    return { runId, llm: deps.llm, sql: deps.sql, trace: (event, data) => tracer.log(step, event, data), engines };
+    return { runId, llm: deps.llm, sql: deps.sql, deepModel: deps.deepModel, trace: (event, data) => tracer.log(step, event, data), engines };
   };
 
   async function execute(status: RunStatus): Promise<RunStatus> {

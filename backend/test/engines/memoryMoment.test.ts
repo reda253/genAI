@@ -7,6 +7,7 @@ import { createOrchestrator } from '../../src/agents/orchestrator.ts';
 import { createEngines } from '../../src/engines/index.ts';
 import type { Llm } from '../../src/agents/types.ts';
 import { getEntityContext } from '../../src/engines/worldModelAdapter.ts';
+import { mockSql } from '../helpers.ts';
 
 const nope = () => Promise.reject(new Error('unused'));
 const fakeLlm: Llm = { chat: nope, generate: nope, listModels: nope };
@@ -19,7 +20,7 @@ describe('Demo Memory Moment (H-MEM + World Model live integration)', () => {
       llm: fakeLlm,
       engines,
       logsDir,
-      sql: nope,
+      sql: mockSql, // P2's mock Zetaris views: agents no longer fall back to fixtures
     });
     const app = buildServer({
       orchestrator,
@@ -77,6 +78,6 @@ describe('Demo Memory Moment (H-MEM + World Model live integration)', () => {
     // 6. World Model fact store verification: findings were ingested
     const f001Ctx = getEntityContext(engines.worldModel, 'f001');
     expect(f001Ctx.entity).toBeDefined();
-    expect(f001Ctx.entity?.attrs.title).toBe('Nordwind Studio pays 47 days late on average');
+    expect(f001Ctx.entity?.attrs.title).toBe('22 hours for Atlas Co were never invoiced'); // f001 in the mock views
   });
 });

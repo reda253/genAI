@@ -3,11 +3,11 @@ import type { AgentContext, Finding, Evidence } from './types.ts';
 import { findings as defaultFindings } from './fixtures.ts';
 
 export const SQL_CHECKS = {
-  unbilled_hours: `SELECT client_id, client_name, month, unbilled_hours, unbilled_pct, effective_rate FROM client_profitability WHERE unbilled_pct > 10 OR unbilled_hours > 0`,
+  unbilled_hours: `SELECT client_id, client_name, month, unbilled_hours, unbilled_pct, hourly_rate, effective_rate FROM client_profitability WHERE unbilled_pct > 10 OR unbilled_hours > 0`,
   price_rise: `SELECT subscription_id, vendor, plan, monthly_cost, first_charge_amount, last_charge_amount, price_change_pct FROM subscription_usage WHERE price_change_pct > 15`,
   unused_subscription: `SELECT subscription_id, vendor, plan, monthly_cost, last_login_date, days_since_login FROM subscription_usage WHERE days_since_login > 60`,
   late_payer: `SELECT invoice_id, client_id, client_name, amount, due_date, days_late, bucket, status FROM ar_aging WHERE days_late > 30`,
-  underpriced_service: `SELECT client_id, client_name, hourly_rate, market_rate FROM client_profitability WHERE hourly_rate < market_rate`,
+  underpriced_service: `SELECT client_id, client_name, hourly_rate, market_rate FROM client_profitability WHERE hourly_rate < market_rate * 0.9`,
   duplicate_charge: `SELECT subscription_id, vendor, monthly_cost, max_charges_in_a_month FROM subscription_usage WHERE max_charges_in_a_month > 1`,
 } as const;
 
@@ -59,7 +59,10 @@ export async function leakHunter(ctx: AgentContext): Promise<Finding[]> {
         let totalImpact = 0;
         for (const r of rows) {
           const h = Number(r.unbilled_hours || 0);
-          const rate = Number(r.effective_rate || 60);
+          // Value unbilled time at the client's contracted rate, not the
+          // realized rate (revenue_invoiced / hours_logged), which is diluted
+          // by the unbilled hours themselves.
+          const rate = Number(r.hourly_rate || r.effective_rate || 0);
           totalHours += h;
           totalImpact += h * rate;
         }

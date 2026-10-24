@@ -9,6 +9,15 @@
     "sources": ["Postgres (synthetic freelancer data, infra/docker-compose.yml)", "Public exchange-rate REST API (fx_rates)"],
     "views": ["client_profitability", "cash_position", "subscription_usage", "ar_aging"]
   },
+  "zetaris": {
+    "container": "ledger_lens",
+    "datasource": "ledger_lens_pg",
+    "setup": "zetaris/setup_zetaris.sh",
+    "views": "zetaris/views/",
+    "catalog": "zetaris/catalog.json",
+    "mock_views": "backend/src/zetaris/mock/",
+    "verify": "./zetaris/setup_zetaris.sh --verify-only"
+  },
   "power": {
     "ai_provider": "Meterless Nightshift (Meterless Runtime 1.4, provider contract v4)",
     "provider_code": "backend/src/llm/nightshift.ts",

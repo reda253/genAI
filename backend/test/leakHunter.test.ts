@@ -1,27 +1,43 @@
 import { describe, expect, it } from 'vitest';
 import { leakHunter, SQL_CHECKS } from '../src/agents/leakHunter.ts';
 import type { AgentContext, QueryResult } from '../src/agents/types.ts';
-import { fakeLlm } from './orchestrator.test.ts';
+import { fakeLlm, mockSql } from './helpers.ts';
 
 describe('leakHunter agent', () => {
-  it('falls back to default fixtures when sql rejects (test mock mode)', async () => {
+  it('fails the run when every Zetaris check fails, never returns fixture findings', async () => {
     const ctx: AgentContext = {
       runId: 'run_test_001',
       llm: fakeLlm,
       sql: () => Promise.reject(new Error('no live db')),
       trace: () => {},
     };
+    await expect(leakHunter(ctx)).rejects.toThrow(/Zetaris.*no live db/);
+  });
 
+  it('returns no findings when the views show no leaks', async () => {
+    const ctx: AgentContext = {
+      runId: 'run_test_001b',
+      llm: fakeLlm,
+      sql: (sql: string) => Promise.resolve({ sql, ranAt: '2026-10-01T08:00:00Z', rows: [] }),
+      trace: () => {},
+    };
+    expect(await leakHunter(ctx)).toEqual([]);
+  });
+
+  it('traces a failed check and keeps the others', async () => {
+    const events: string[] = [];
+    const ctx: AgentContext = {
+      runId: 'run_test_001c',
+      llm: fakeLlm,
+      sql: (sql: string) => sql === SQL_CHECKS.price_rise
+        ? Promise.reject(new Error('view missing'))
+        : mockSql(sql),
+      trace: (event: string) => { events.push(event); },
+    };
     const findings = await leakHunter(ctx);
-    expect(findings.length).toBe(6);
-    expect(findings.map(f => f.type)).toEqual([
-      'late_payer',
-      'unbilled_hours',
-      'price_rise',
-      'unused_subscription',
-      'underpriced_service',
-      'duplicate_charge',
-    ]);
+    expect(findings.map(f => f.type)).not.toContain('price_rise');
+    expect(findings).toHaveLength(5);
+    expect(events).toContain('check_failed');
   });
 
   it('detects findings from SQL view query results', async () => {

@@ -1,13 +1,36 @@
 // CFO agent (P5): morning brief and top 3 moves ranked by impact and urgency.
 import type { ActionType, AgentContext, Brief, Explanation, Finding, Forecast, Move, Urgency } from './types.ts';
-import { briefFor } from './fixtures.ts';
-import { stripReasoning } from '../llm/nightshift.ts';
+import { extractJson } from './explainer.ts';
 
-function extractJson(text: string): unknown {
-  const cleaned = stripReasoning(text).trim();
-  const match = cleaned.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
-  const raw = match ? match[1] : cleaned;
-  return JSON.parse(raw);
+const ACTIONS: ActionType[] = ['bill_hours', 'send_reminder', 'cancel_subscription', 'dispute_charge', 'raise_rate'];
+const URGENCIES: Urgency[] = ['high', 'medium', 'low'];
+
+/**
+ * Exactly 3 model moves that each cite known findings with valid enums, or null.
+ * Ids, ranks, status and money come from us; only the wording and choice come from the model.
+ */
+function groundMoves(raw: unknown, findings: Finding[]): Move[] | null {
+  if (!Array.isArray(raw) || raw.length !== 3) return null;
+  const byId = new Map(findings.map(f => [f.id, f]));
+  const moves: Move[] = [];
+  for (const [i, m] of raw.entries()) {
+    const ids: string[] = Array.isArray(m?.finding_ids) ? m.finding_ids.map(String) : [];
+    if (!ids.length || !ids.every(id => byId.has(id))) return null;
+    if (!ACTIONS.includes(m.action_type) || !URGENCIES.includes(m.urgency)) return null;
+    moves.push({
+      id: `m00${i + 1}`,
+      rank: i + 1,
+      title: String(m.title ?? byId.get(ids[0])!.title),
+      action_type: m.action_type,
+      monthly_impact_eur: Math.round(ids.reduce((s, id) => s + byId.get(id)!.monthly_impact_eur, 0) * 100) / 100,
+      urgency: m.urgency,
+      reason: String(m.reason ?? ''),
+      finding_ids: ids,
+      memory_note: null,
+      status: 'pending',
+    });
+  }
+  return moves;
 }
 
 function mapFindingToAction(f: Finding): { action_type: ActionType; urgency: Urgency; reason: string } {
@@ -56,7 +79,7 @@ export async function cfo(
   input: { findings: Finding[]; forecast: Forecast; explanation: Explanation },
 ): Promise<Brief> {
   const nowIso = new Date().toISOString();
-  const cashToday = input.forecast?.start_balance ?? 8420.00;
+  const cashToday = input.forecast.start_balance; // latest balance from cash_position, via the Forecaster
 
   try {
     const prompt = `You are the CFO agent for Ledger Lens.
@@ -66,7 +89,9 @@ ${JSON.stringify(input.findings, null, 2)}
 Explanation:
 ${JSON.stringify(input.explanation, null, 2)}
 
-Produce a Morning Brief in strict JSON format with exactly 3 prioritized moves:
+Produce a Morning Brief in strict JSON format with exactly 3 prioritized moves.
+Rules: action_type must be one of ${ACTIONS.join(', ')}. urgency must be one of ${URGENCIES.join(', ')}.
+finding_ids must only contain ids from the findings above.
 {
   "run_id": "${ctx.runId}",
   "generated_at": "${nowIso}",
@@ -92,21 +117,23 @@ Produce a Morning Brief in strict JSON format with exactly 3 prioritized moves:
     const raw = await ctx.llm.chat([
       { role: 'system', content: 'You are CFO agent. Output ONLY valid JSON with exactly 3 moves.' },
       { role: 'user', content: prompt },
-    ]);
+    ], { model: ctx.deepModel });
 
     const parsed = extractJson(raw) as Partial<Brief>;
-    if (parsed && Array.isArray(parsed.moves) && parsed.moves.length === 3) {
+    const moves = groundMoves(parsed?.moves, input.findings);
+    if (moves) {
       return {
         run_id: ctx.runId,
         generated_at: nowIso,
-        cash_today: typeof parsed.cash_today === 'number' ? parsed.cash_today : cashToday,
-        what_changed: Array.isArray(parsed.what_changed) ? parsed.what_changed : [],
-        moves: parsed.moves,
+        cash_today: cashToday, // never the model's number
+        what_changed: Array.isArray(parsed.what_changed) ? parsed.what_changed.map(String) : [],
+        moves,
         findings_count: input.findings.length,
       };
     }
-  } catch {
-    // Graceful fallback when LLM is offline or in mock tests
+    ctx.trace('llm_rejected', { reason: 'moves were not 3 valid moves citing known findings' });
+  } catch (e) {
+    ctx.trace('llm_failed', { error: (e as Error).message });
   }
 
   // Deterministic ranking from findings
@@ -117,38 +144,35 @@ Produce a Morning Brief in strict JSON format with exactly 3 prioritized moves:
   });
 
   const selectedFindings = sortedFindings.slice(0, 3);
-  if (selectedFindings.length === 3) {
-    const moves: Move[] = selectedFindings.map((f, index) => {
-      const action = mapFindingToAction(f);
-      return {
-        id: `m00${index + 1}`,
-        rank: index + 1,
-        title: action.action_type === 'bill_hours'
-          ? `Invoice ${f.title}`
-          : action.action_type === 'send_reminder'
-          ? `Send payment reminder for ${f.title}`
-          : action.action_type === 'cancel_subscription'
-          ? `Cancel ${f.title}`
-          : f.title,
-        action_type: action.action_type,
-        monthly_impact_eur: f.monthly_impact_eur,
-        urgency: action.urgency,
-        reason: action.reason,
-        finding_ids: [f.id],
-        memory_note: null,
-        status: 'pending',
-      };
-    });
-
+  // Fewer than 3 findings = fewer moves: never pad with invented ones.
+  const moves: Move[] = selectedFindings.map((f, index) => {
+    const action = mapFindingToAction(f);
     return {
-      run_id: ctx.runId,
-      generated_at: nowIso,
-      cash_today: cashToday,
-      what_changed: selectedFindings.slice(0, 2).map(f => f.title),
-      moves,
-      findings_count: input.findings.length,
+      id: `m00${index + 1}`,
+      rank: index + 1,
+      title: action.action_type === 'bill_hours'
+        ? `Invoice ${f.title}`
+        : action.action_type === 'send_reminder'
+        ? `Send payment reminder for ${f.title}`
+        : action.action_type === 'cancel_subscription'
+        ? `Cancel ${f.title}`
+        : f.title,
+      action_type: action.action_type,
+      monthly_impact_eur: f.monthly_impact_eur,
+      urgency: action.urgency,
+      reason: action.reason,
+      finding_ids: [f.id],
+      memory_note: null,
+      status: 'pending',
     };
-  }
+  });
 
-  return { ...briefFor(ctx.runId, nowIso), findings_count: input.findings.length };
+  return {
+    run_id: ctx.runId,
+    generated_at: nowIso,
+    cash_today: cashToday,
+    what_changed: selectedFindings.slice(0, 2).map(f => f.title),
+    moves,
+    findings_count: input.findings.length,
+  };
 }

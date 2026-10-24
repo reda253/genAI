@@ -1,13 +1,48 @@
 // Explainer agent (P5): causal analysis with zero hallucination and strict evidence linking.
 import type { AgentContext, Cause, Explanation, Finding } from './types.ts';
-import { explanation as defaultExplanation } from './fixtures.ts';
 import { stripReasoning } from '../llm/nightshift.ts';
 
-function extractJson(text: string): unknown {
+/**
+ * The model's JSON answer. Nemotron Ultra sometimes writes its reasoning into the reply without a
+ * </think> tag, so if the whole text isn't JSON, take the earliest '{' whose slice to the last '}' parses.
+ */
+export function extractJson(text: string): unknown {
   const cleaned = stripReasoning(text).trim();
   const match = cleaned.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
   const raw = match ? match[1] : cleaned;
-  return JSON.parse(raw);
+  try {
+    return JSON.parse(raw);
+  } catch (e) {
+    const end = raw.lastIndexOf('}');
+    for (let i = raw.indexOf('{'); i !== -1 && i < end; i = raw.indexOf('{', i + 1)) {
+      try { return JSON.parse(raw.slice(i, end + 1)); } catch { /* try the next '{' */ }
+    }
+    throw e;
+  }
+}
+
+/** Every number a finding can justify: its impacts plus every numeric cell of its evidence rows. */
+function groundedAmounts(f: Finding): Set<number> {
+  const nums = new Set([f.monthly_impact_eur, f.cash_at_risk_eur].map(n => Math.round(n * 100) / 100));
+  for (const e of f.evidence) for (const row of e.rows) for (const v of Object.values(row)) {
+    if (typeof v === 'number') nums.add(Math.round(v * 100) / 100);
+  }
+  return nums;
+}
+
+/** Keep only causes that cite a real finding; take evidence from that finding, never from the model. */
+function groundCauses(raw: unknown, findings: Finding[]): { causes: Cause[]; ungrounded: number[] } {
+  const byId = new Map(findings.map(f => [f.id, f]));
+  const ungrounded: number[] = [];
+  const causes = (Array.isArray(raw) ? raw : [])
+    .filter((c): c is Record<string, unknown> => !!c && typeof c === 'object' && byId.has(String(c.finding_id)))
+    .map((c, i) => {
+      const f = byId.get(String(c.finding_id))!;
+      const amount = Number(c.amount_eur);
+      if (!Number.isFinite(amount) || !groundedAmounts(f).has(Math.round(amount * 100) / 100)) ungrounded.push(amount);
+      return { rank: i + 1, cause: String(c.cause ?? f.title), amount_eur: amount, finding_id: f.id, evidence: f.evidence };
+    });
+  return { causes, ungrounded };
 }
 
 export async function explainer(
@@ -19,18 +54,17 @@ export async function explainer(
     : input.findings;
 
   try {
-    // If LLM is callable, prompt for intelligent synthesis
     const prompt = `You are the Explainer agent for Ledger Lens.
-Question: "${input.question}"
+Question: ${JSON.stringify(input.question)}
 Findings available:
 ${JSON.stringify(relevantFindings, null, 2)}
 
-Respond with strict JSON matching the Explanation schema:
+Respond with strict JSON matching the Explanation schema. Every cause must cite one finding_id from the list,
+and amount_eur must be a number that appears in that finding (its impact or its evidence rows):
 {
-  "question": "${input.question}",
   "summary": "1-2 sentence executive summary citing exact causes and amounts",
   "causes": [
-    { "rank": 1, "cause": "...", "amount_eur": 0.00, "finding_id": "...", "evidence": [] }
+    { "rank": 1, "cause": "...", "amount_eur": 0.00, "finding_id": "..." }
   ],
   "uncertain": false,
   "uncertainty_note": null
@@ -39,20 +73,20 @@ Respond with strict JSON matching the Explanation schema:
     const raw = await ctx.llm.chat([
       { role: 'system', content: 'You are Explainer agent. Return ONLY valid JSON.' },
       { role: 'user', content: prompt },
-    ]);
+    ], { model: ctx.deepModel });
 
     const parsed = extractJson(raw) as Partial<Explanation>;
-    if (parsed && typeof parsed.summary === 'string' && Array.isArray(parsed.causes)) {
-      return {
-        question: input.question,
-        summary: parsed.summary,
-        causes: parsed.causes,
-        uncertain: Boolean(parsed.uncertain),
-        uncertainty_note: parsed.uncertainty_note ?? null,
-      };
+    const { causes, ungrounded } = groundCauses(parsed?.causes, relevantFindings);
+    if (typeof parsed?.summary === 'string' && causes.length > 0) {
+      const uncertain = Boolean(parsed.uncertain) || ungrounded.length > 0;
+      const note = ungrounded.length > 0
+        ? `Amounts not found in the evidence rows: ${ungrounded.join(', ')} EUR.`
+        : parsed.uncertainty_note ?? null;
+      return { question: input.question, summary: parsed.summary, causes, uncertain, uncertainty_note: uncertain ? note : null };
     }
-  } catch {
-    // Graceful fallback for test environments or when LLM is offline
+    ctx.trace('llm_rejected', { reason: 'no summary or no cause citing a known finding' });
+  } catch (e) {
+    ctx.trace('llm_failed', { error: (e as Error).message });
   }
 
   // Deterministic fallback based on input findings
@@ -75,5 +109,11 @@ Respond with strict JSON matching the Explanation schema:
     };
   }
 
-  return { ...structuredClone(defaultExplanation), question: input.question };
+  return {
+    question: input.question,
+    summary: 'No leak in the current data explains this.',
+    causes: [],
+    uncertain: true,
+    uncertainty_note: 'No findings matched the question, so there is no evidence to cite.',
+  };
 }

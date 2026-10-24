@@ -101,4 +101,6 @@ export interface AgentContext {
   llm: Llm;
   sql: (sql: string) => Promise<QueryResult>;
   trace: (event: string, data?: unknown) => void;
+  /** Deep Nemotron lane for reasoning-heavy agents (Explainer, CFO); undefined = provider default. */
+  deepModel?: string;
 }

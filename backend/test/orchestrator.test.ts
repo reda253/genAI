@@ -3,14 +3,26 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createOrchestrator, NoRunYetError, NotFoundError, RunInProgressError } from '../src/agents/orchestrator.ts';
 import type { Llm } from '../src/agents/types.ts';
+import { mockSql } from './helpers.ts';
 
 const nope = () => Promise.reject(new Error('llm not used by stubs'));
 export const fakeLlm: Llm = { chat: nope, generate: nope, listModels: nope };
 
 function make(agents = {}) {
   const logsDir = mkdtempSync(join(tmpdir(), 'orch-'));
-  return { logsDir, o: createOrchestrator({ llm: fakeLlm, sql: nope, logsDir, agents }) };
+  return { logsDir, o: createOrchestrator({ llm: fakeLlm, sql: mockSql, logsDir, agents }) };
 }
+
+test('agents receive the deep model id', async () => {
+  let seen: string | undefined;
+  const logsDir = mkdtempSync(join(tmpdir(), 'orch-'));
+  const o = createOrchestrator({
+    llm: fakeLlm, sql: mockSql, logsDir, deepModel: 'deep-x',
+    agents: { leakHunter: async ctx => { seen = ctx.deepModel; return []; } },
+  });
+  await o.wait(o.startRun().run_id);
+  expect(seen).toBe('deep-x');
+});
 
 test('run completes and stores latest', async () => {
   const { o } = make();
@@ -26,7 +38,8 @@ test('trace has start/done for 4 steps', async () => {
   const { o, logsDir } = make();
   const { run_id } = o.startRun();
   await o.wait(run_id);
-  const lines = readFileSync(join(logsDir, `${run_id}.jsonl`), 'utf8').trim().split('\n').map(l => JSON.parse(l));
+  const lines = readFileSync(join(logsDir, `${run_id}.jsonl`), 'utf8').trim().split('\n').map(l => JSON.parse(l))
+    .filter(l => l.event === 'start' || l.event === 'done'); // agents may also trace e.g. llm_failed
   expect(lines.map(l => `${l.step}:${l.event}`)).toEqual([
     'leak_hunter:start', 'leak_hunter:done', 'explainer:start', 'explainer:done',
     'forecaster:start', 'forecaster:done', 'cfo:start', 'cfo:done',

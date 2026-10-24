@@ -23,7 +23,8 @@ test('chat sends contract headers and defaults', async () => {
   expect(init.headers).toMatchObject({
     authorization: 'Bearer t', 'meterless-app': 'ledger-lens', 'meterless-scope': 'user',
   });
-  expect(JSON.parse(init.body as string)).toMatchObject({ model: 'fast', max_tokens: 2000, temperature: 0 });
+  // 8000: with the full findings prompt, Lightning spends >2000 tokens reasoning and returns empty (seen live)
+  expect(JSON.parse(init.body as string)).toMatchObject({ model: 'fast', max_tokens: 8000, temperature: 0 });
 });
 
 test('opts override model and maxTokens', async () => {

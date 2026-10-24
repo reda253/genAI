@@ -1,0 +1,4 @@
+# Runtime dependencies for the data loader.
+# The generator itself uses only the Python standard library.
+psycopg2-binary>=2.9,<3
+python-dotenv>=1.0,<2

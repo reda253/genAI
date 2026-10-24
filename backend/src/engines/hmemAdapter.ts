@@ -53,6 +53,8 @@ export function applyMemoriesToMoves(
   moves: Move[],
 ): Move[] {
   const updatedMoves = moves.map(m => ({ ...m }));
+  // Sort weight only: monthly_impact_eur is money from the findings and is shown to the user, never scaled.
+  const score = new Map(updatedMoves.map(m => [m.id, m.monthly_impact_eur]));
   let hasAnyMemory = false;
 
   for (const move of updatedMoves) {
@@ -71,12 +73,12 @@ export function applyMemoriesToMoves(
         if (move.urgency === 'high') move.urgency = 'medium';
         else if (move.urgency === 'medium') move.urgency = 'low';
         // Reduce effective impact score for sorting
-        move.monthly_impact_eur = move.monthly_impact_eur * 0.5;
+        score.set(move.id, move.monthly_impact_eur * 0.5);
       } else if (text.includes('approved')) {
         // User approved before
         move.memory_note = `You previously approved a similar recommendation ("${best.content.slice(0, 80)}..."). Prioritized.`;
         // Boost effective impact score for sorting
-        move.monthly_impact_eur = move.monthly_impact_eur * 1.5;
+        score.set(move.id, move.monthly_impact_eur * 1.5);
       }
     }
   }
@@ -90,7 +92,7 @@ export function applyMemoriesToMoves(
   updatedMoves.sort((a, b) => {
     const uDiff = (urgencyWeight[b.urgency] ?? 0) - (urgencyWeight[a.urgency] ?? 0);
     if (uDiff !== 0) return uDiff;
-    return b.monthly_impact_eur - a.monthly_impact_eur;
+    return score.get(b.id)! - score.get(a.id)!;
   });
 
   // Re-assign ranks 1..N

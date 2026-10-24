@@ -69,6 +69,18 @@ describe('Meterless Engine Adapters', () => {
     expect(adjustedM003.urgency).toBe('low');
   });
 
+  it('H-MEM: memories re-rank moves but never change the money shown to the user', () => {
+    const { hmem } = createEngines();
+    const testMoves = structuredClone(moves);
+    recordDecision(hmem, testMoves[0], 'reject', null);  // m001 bill_hours 1320
+    recordDecision(hmem, testMoves[2], 'approve', null); // m003 cancel Webflow 29
+    const reranked = applyMemoriesToMoves(hmem, testMoves);
+    for (const m of reranked) {
+      expect(m.monthly_impact_eur).toBe(moves.find(o => o.id === m.id)!.monthly_impact_eur);
+    }
+    expect(reranked.map(m => m.rank)).toEqual([1, 2, 3]);
+  });
+
   it('Markovian: runs chunked hypothesis investigation with carryover', async () => {
     const { markovian } = createEngines();
 

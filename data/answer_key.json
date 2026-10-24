@@ -1,0 +1,44 @@
+[
+  {
+    "type": "unbilled_hours",
+    "client_id": "c01",
+    "subscription_id": null,
+    "monthly_impact_eur": 1320.00,
+    "note": "22h (12 Aug + 10 Sep) x EUR 60; Atlas Co"
+  },
+  {
+    "type": "price_rise",
+    "client_id": null,
+    "subscription_id": "sub02",
+    "monthly_impact_eur": 14.00,
+    "note": "Adobe EUR 66.99 -> EUR 80.99 (+20.9%)"
+  },
+  {
+    "type": "unused_subscription",
+    "client_id": null,
+    "subscription_id": "sub05",
+    "monthly_impact_eur": 29.00,
+    "note": "Webflow last login 2026-06-29 (94 days)"
+  },
+  {
+    "type": "late_payer",
+    "client_id": "c04",
+    "subscription_id": null,
+    "monthly_impact_eur": 0.00,
+    "note": "inv0031 EUR 2,400 47d late; inv0038 EUR 2,400 33d late; EUR 4,800 cash at risk"
+  },
+  {
+    "type": "underpriced_service",
+    "client_id": "c07",
+    "subscription_id": null,
+    "monthly_impact_eur": 540.00,
+    "note": "Kestrel EUR 42 vs EUR 60 market; 30h/month"
+  },
+  {
+    "type": "duplicate_charge",
+    "client_id": null,
+    "subscription_id": "sub03",
+    "monthly_impact_eur": 15.00,
+    "note": "Figma twice in August"
+  }
+]

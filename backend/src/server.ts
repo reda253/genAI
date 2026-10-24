@@ -3,10 +3,11 @@ import Fastify, { type FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
 import { createOrchestrator, NoRunYetError, NotFoundError, RunInProgressError } from './agents/orchestrator.ts';
 import type { Scenario } from './agents/types.ts';
+import type { RuntimeStatus } from './llm/nightshift.ts';
 
 export interface ServerDeps {
   orchestrator: ReturnType<typeof createOrchestrator>;
-  checks: { zetaris(): Promise<boolean>; nightshift(): Promise<boolean> };
+  checks: { zetaris(): Promise<boolean>; nightshift(): Promise<RuntimeStatus> };
 }
 
 const explainBody = {
@@ -54,8 +55,8 @@ export function buildServer({ orchestrator: o, checks }: ServerDeps): FastifyIns
     reply.status(404).send({ error: { code: 'not_found', message: `no route ${req.method} ${req.url}` } }));
 
   app.get('/api/health', async () => {
-    const [zetaris, nightshift] = await Promise.all([checks.zetaris(), checks.nightshift()]);
-    return { ok: true, zetaris, nightshift };
+    const [zetaris, status] = await Promise.all([checks.zetaris(), checks.nightshift()]);
+    return { ok: true, zetaris, nightshift: status === 'online', nightshift_status: status };
   });
 
   app.post('/api/runs', async (_req, reply) => reply.status(202).send(o.startRun()));

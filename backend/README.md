@@ -20,4 +20,6 @@ Routes are the 10 in `docs/contracts.md` §4. Try: `curl -X POST localhost:4000/
 | P5 | `src/agents/leakHunter.ts`, `explainer.ts`, `forecaster.ts`, `cfo.ts` | replace the stub bodies, keep the signatures; `ctx.sql`, `ctx.llm`, `ctx.trace` are there |
 | P6 | `web/src/mock/*.json` | same shapes the API returns |
 
-Nightshift: use full model ids (`nvidia/nemotron-3.5-lightning-30b-a3b` fast, `nvidia/nemotron-3-ultra-550b-a55b` deep). `llm.chat()` already strips `</think>` reasoning and defaults to `max_tokens` 2000.
+Nightshift: use full model ids (`nvidia/nemotron-3.5-lightning-30b-a3b` fast, `nvidia/nemotron-3-ultra-550b-a55b` deep) so runs visibly use Nemotron; `meterless/auto` and other `meterless/*` routing modes also work. `llm.chat()` strips `</think>` reasoning and defaults to `max_tokens` 2000.
+
+`src/llm/nightshift.ts` implements the official POWER prompt (Meterless Runtime 1.4, provider contract v4): URL normalised to `<host>/v1`, real token required (`rt-local` rejected; falls back to `<stateDir>/proxy-token`), `meterless-app: ledger-lens` on every call, `meterless-scope: user` on chat, `status()` = online / unauthorized / offline from `GET /v1/models`, Auto Detect on ports 8088/8090/8787/11434 at startup, 180 s chat timeout, `parseConnectLink()` for `/connect#k=` links.

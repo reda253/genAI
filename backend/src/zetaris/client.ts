@@ -290,6 +290,17 @@ function filterMockRows(
   });
 }
 
+function headerName(header: unknown): string {
+  if (typeof header === 'string') return header;
+  if (header && typeof header === 'object') {
+    const named = header as { name?: unknown; column?: unknown; label?: unknown };
+    for (const candidate of [named.name, named.column, named.label]) {
+      if (typeof candidate === 'string') return candidate;
+    }
+  }
+  return String(header);
+}
+
 function rowsFromResponse(body: unknown): Record<string, unknown>[] {
   if (!body || typeof body !== 'object') {
     throw new ZetarisError('unexpected Zetaris response');
@@ -312,7 +323,7 @@ function rowsFromResponse(body: unknown): Record<string, unknown>[] {
   return payload.data.map((row) => {
     if (!Array.isArray(row)) return row as Record<string, unknown>;
     if (!headers) throw new ZetarisError('Zetaris response is missing column headers');
-    return Object.fromEntries(headers.map((header, index) => [String(header), row[index]]));
+    return Object.fromEntries(headers.map((header, index) => [headerName(header), row[index]]));
   });
 }
 

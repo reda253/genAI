@@ -64,7 +64,7 @@ describe('live client', () => {
       captured = { url: String(url), init: init ?? {} };
       return new Response(
         JSON.stringify({
-          headers: ['client_id', 'hours_logged'],
+          headers: [{ name: 'client_id' }, 'hours_logged'],
           data: [['c01', '52']],
         }),
         { status: 200, headers: { 'content-type': 'application/json' } },

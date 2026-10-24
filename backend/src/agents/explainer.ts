@@ -54,18 +54,34 @@ export async function explainer(
     ? input.findings.filter(f => f.id === input.finding_id)
     : input.findings;
 
-  // 1. If Markovian engine is available and active, execute bounded multi-step chunk investigation
+  /** Parse a model answer and keep it only if it has a summary and at least one cause citing a known finding. */
+  const grounded = (raw: string): Explanation | null => {
+    let parsed: Partial<Explanation>;
+    try { parsed = extractJson(raw) as Partial<Explanation>; } catch { return null; } // not JSON = rejected answer
+    const { causes, ungrounded } = groundCauses(parsed?.causes, relevantFindings);
+    if (typeof parsed?.summary !== 'string' || causes.length === 0) return null;
+    const uncertain = Boolean(parsed.uncertain) || ungrounded.length > 0;
+    const note = ungrounded.length > 0
+      ? `Amounts not found in the evidence rows: ${ungrounded.join(', ')} EUR.`
+      : parsed.uncertainty_note ?? null;
+    return { question: input.question, summary: parsed.summary, causes, uncertain, uncertainty_note: uncertain ? note : null };
+  };
+
+  // 1. Markovian engine: bounded multi-chunk investigation on the deep lane; its final JSON answer is grounded
   if (ctx.engines?.markovian) {
     try {
       const inv = await runExplainerInvestigation(ctx.engines.markovian, {
         question: input.question,
         findingId: input.finding_id,
         findings: input.findings,
-        generator: prompt => ctx.llm.generate(prompt),
+        generator: prompt => ctx.llm.chat([{ role: 'user', content: prompt }], { model: ctx.deepModel }),
       });
-      return inv.explanation;
-    } catch {
-      // Fall through to LLM chat or deterministic fallback
+      ctx.trace('markovian_done', { chunks: inv.chunkCount, tokens: inv.tokensProcessed });
+      const answer = grounded(inv.output);
+      if (answer) return answer;
+      ctx.trace('llm_rejected', { reason: 'Markovian answer had no cause citing a known finding' });
+    } catch (e) {
+      ctx.trace('llm_failed', { engine: 'markovian', error: (e as Error).message });
     }
   }
 
@@ -92,15 +108,8 @@ and amount_eur must be a number that appears in that finding (its impact or its 
       { role: 'user', content: prompt },
     ], { model: ctx.deepModel });
 
-    const parsed = extractJson(raw) as Partial<Explanation>;
-    const { causes, ungrounded } = groundCauses(parsed?.causes, relevantFindings);
-    if (typeof parsed?.summary === 'string' && causes.length > 0) {
-      const uncertain = Boolean(parsed.uncertain) || ungrounded.length > 0;
-      const note = ungrounded.length > 0
-        ? `Amounts not found in the evidence rows: ${ungrounded.join(', ')} EUR.`
-        : parsed.uncertainty_note ?? null;
-      return { question: input.question, summary: parsed.summary, causes, uncertain, uncertainty_note: uncertain ? note : null };
-    }
+    const answer = grounded(raw);
+    if (answer) return answer;
     ctx.trace('llm_rejected', { reason: 'no summary or no cause citing a known finding' });
   } catch (e) {
     ctx.trace('llm_failed', { error: (e as Error).message });

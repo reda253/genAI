@@ -4,6 +4,9 @@ import { leakHunter } from './leakHunter.ts';
 import { explainer } from './explainer.ts';
 import { forecaster } from './forecaster.ts';
 import { cfo } from './cfo.ts';
+import { createEngines, type Engines } from '../engines/index.ts';
+import { recordDecision } from '../engines/hmemAdapter.ts';
+import { ingestZetarisData } from '../engines/worldModelAdapter.ts';
 import type {
   AgentContext, Brief, Explanation, Finding, Forecast, Llm, Move, RunStatus, RunStep, Scenario,
 } from './types.ts';
@@ -11,7 +14,13 @@ import type {
 export interface Agents { leakHunter: typeof leakHunter; explainer: typeof explainer; forecaster: typeof forecaster; cfo: typeof cfo }
 export interface RunResult { brief: Brief; findings: Finding[]; forecast: Forecast; explanation: Explanation }
 export interface OrchestratorDeps {
-  llm: Llm; sql: AgentContext['sql']; logsDir: string; agents?: Partial<Agents>; now?: () => Date; deepModel?: string;
+  llm: Llm;
+  sql: AgentContext['sql'];
+  logsDir: string;
+  agents?: Partial<Agents>;
+  now?: () => Date;
+  engines?: Engines;
+  deepModel?: string;
 }
 
 export class RunInProgressError extends Error {
@@ -27,6 +36,7 @@ const DEFAULT_QUESTION = 'Why did my margin drop in September?';
 // ponytail: in-memory only, runs are lost on restart; persist when the demo needs history.
 export function createOrchestrator(deps: OrchestratorDeps) {
   const agents: Agents = { leakHunter, explainer, forecaster, cfo, ...deps.agents };
+  const engines = deps.engines ?? createEngines(deps.llm);
   const now = deps.now ?? (() => new Date());
   const runs = new Map<string, RunStatus>();
   const done = new Map<string, Promise<RunStatus>>();
@@ -35,7 +45,7 @@ export function createOrchestrator(deps: OrchestratorDeps) {
 
   const ctxFor = (runId: string, step: string | null): AgentContext => {
     const tracer = createTracer(runId, deps.logsDir);
-    return { runId, llm: deps.llm, sql: deps.sql, deepModel: deps.deepModel, trace: (event, data) => tracer.log(step, event, data) };
+    return { runId, llm: deps.llm, sql: deps.sql, deepModel: deps.deepModel, trace: (event, data) => tracer.log(step, event, data), engines };
   };
 
   async function execute(status: RunStatus): Promise<RunStatus> {
@@ -49,6 +59,13 @@ export function createOrchestrator(deps: OrchestratorDeps) {
     };
     try {
       const findings = await step('leak_hunter', ctx => agents.leakHunter(ctx));
+      if (engines?.worldModel) {
+        try {
+          await ingestZetarisData(engines.worldModel, { findings }, status.run_id);
+        } catch {
+          // non-blocking
+        }
+      }
       const explanation = await step('explainer', ctx => agents.explainer(ctx, { question: DEFAULT_QUESTION, finding_id: null, findings }));
       const forecast = await step('forecaster', ctx => agents.forecaster(ctx, { type: 'baseline' }));
       const brief = await step('cfo', ctx => agents.cfo(ctx, { findings, forecast, explanation }));
@@ -108,8 +125,11 @@ export function createOrchestrator(deps: OrchestratorDeps) {
       if (!move) throw new NotFoundError(`move ${moveId} not found`);
       move.status = decision === 'approve' ? 'approved' : 'rejected';
       // P4: store { move, decision, note } in H-MEM here.
-      void note;
+      if (engines?.hmem) {
+        recordDecision(engines.hmem, move, decision, note);
+      }
       return { ...move };
     },
+    engines,
   };
 }

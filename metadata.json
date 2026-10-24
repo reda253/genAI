@@ -31,24 +31,24 @@
   "meterless_engines": [
     {
       "engine": "World Model",
-      "status": "planned",
+      "status": "implemented",
       "role": "Shared state for agents: clients, vendors, invoices and findings ingested from Zetaris views; getContext(entityId) for agents",
       "file": "backend/src/engines/world-model/",
-      "test": ""
+      "test": "backend/test/engines/world-model/smoke.test.ts"
     },
     {
       "engine": "H-MEM",
-      "status": "planned",
+      "status": "implemented",
       "role": "Remembers each approve/reject decision; top memories are retrieved at run start and change the CFO ranking",
       "file": "backend/src/engines/hmem/",
-      "test": ""
+      "test": "backend/test/engines/hmem/smoke.test.ts"
     },
     {
       "engine": "Markovian Thinking",
-      "status": "planned",
+      "status": "implemented",
       "role": "Runs the Explainer investigation in bounded chunks, one hypothesis per chunk, carrying evidence forward",
       "file": "backend/src/engines/markovian/",
-      "test": ""
+      "test": "backend/test/engines/markovian/smoke.test.ts"
     }
   ],
   "traces": "logs/<run_id>.jsonl, one line per agent step"

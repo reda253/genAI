@@ -1,6 +1,7 @@
-// CFO agent (P5): morning brief and top 3 moves ranked by impact and urgency.
+// CFO agent (P5): morning brief and top 3 moves ranked by impact and urgency; P4 adds H-MEM memories.
 import type { ActionType, AgentContext, Brief, Explanation, Finding, Forecast, Move, Urgency } from './types.ts';
 import { extractJson } from './explainer.ts';
+import { applyMemoriesToMoves } from '../engines/hmemAdapter.ts';
 
 const ACTIONS: ActionType[] = ['bill_hours', 'send_reminder', 'cancel_subscription', 'dispute_charge', 'raise_rate'];
 const URGENCIES: Urgency[] = ['high', 'medium', 'low'];
@@ -81,6 +82,8 @@ export async function cfo(
   const nowIso = new Date().toISOString();
   const cashToday = input.forecast.start_balance; // latest balance from cash_position, via the Forecaster
 
+  let brief: Brief | null = null;
+
   try {
     const prompt = `You are the CFO agent for Ledger Lens.
 Current Cash: ${cashToday} EUR
@@ -122,7 +125,7 @@ finding_ids must only contain ids from the findings above.
     const parsed = extractJson(raw) as Partial<Brief>;
     const moves = groundMoves(parsed?.moves, input.findings);
     if (moves) {
-      return {
+      brief = {
         run_id: ctx.runId,
         generated_at: nowIso,
         cash_today: cashToday, // never the model's number
@@ -130,49 +133,59 @@ finding_ids must only contain ids from the findings above.
         moves,
         findings_count: input.findings.length,
       };
+    } else {
+      ctx.trace('llm_rejected', { reason: 'moves were not 3 valid moves citing known findings' });
     }
-    ctx.trace('llm_rejected', { reason: 'moves were not 3 valid moves citing known findings' });
   } catch (e) {
     ctx.trace('llm_failed', { error: (e as Error).message });
   }
 
   // Deterministic ranking from findings
-  const sortedFindings = [...input.findings].sort((a, b) => {
-    const scoreA = a.monthly_impact_eur + a.cash_at_risk_eur;
-    const scoreB = b.monthly_impact_eur + b.cash_at_risk_eur;
-    return scoreB - scoreA;
-  });
+  if (!brief) {
+    const sortedFindings = [...input.findings].sort((a, b) => {
+      const scoreA = a.monthly_impact_eur + a.cash_at_risk_eur;
+      const scoreB = b.monthly_impact_eur + b.cash_at_risk_eur;
+      return scoreB - scoreA;
+    });
 
-  const selectedFindings = sortedFindings.slice(0, 3);
-  // Fewer than 3 findings = fewer moves: never pad with invented ones.
-  const moves: Move[] = selectedFindings.map((f, index) => {
-    const action = mapFindingToAction(f);
-    return {
-      id: `m00${index + 1}`,
-      rank: index + 1,
-      title: action.action_type === 'bill_hours'
-        ? `Invoice ${f.title}`
-        : action.action_type === 'send_reminder'
-        ? `Send payment reminder for ${f.title}`
-        : action.action_type === 'cancel_subscription'
-        ? `Cancel ${f.title}`
-        : f.title,
-      action_type: action.action_type,
-      monthly_impact_eur: f.monthly_impact_eur,
-      urgency: action.urgency,
-      reason: action.reason,
-      finding_ids: [f.id],
-      memory_note: null,
-      status: 'pending',
+    const selectedFindings = sortedFindings.slice(0, 3);
+    // Fewer than 3 findings = fewer moves: never pad with invented ones.
+    const moves: Move[] = selectedFindings.map((f, index) => {
+      const action = mapFindingToAction(f);
+      return {
+        id: `m00${index + 1}`,
+        rank: index + 1,
+        title: action.action_type === 'bill_hours'
+          ? `Invoice ${f.title}`
+          : action.action_type === 'send_reminder'
+          ? `Send payment reminder for ${f.title}`
+          : action.action_type === 'cancel_subscription'
+          ? `Cancel ${f.title}`
+          : f.title,
+        action_type: action.action_type,
+        monthly_impact_eur: f.monthly_impact_eur,
+        urgency: action.urgency,
+        reason: action.reason,
+        finding_ids: [f.id],
+        memory_note: null,
+        status: 'pending',
+      };
+    });
+
+    brief = {
+      run_id: ctx.runId,
+      generated_at: nowIso,
+      cash_today: cashToday,
+      what_changed: selectedFindings.slice(0, 2).map(f => f.title),
+      moves,
+      findings_count: input.findings.length,
     };
-  });
+  }
 
-  return {
-    run_id: ctx.runId,
-    generated_at: nowIso,
-    cash_today: cashToday,
-    what_changed: selectedFindings.slice(0, 2).map(f => f.title),
-    moves,
-    findings_count: input.findings.length,
-  };
+  // P4 H-MEM: apply user decision memories to adjust move ranking and memory_note
+  if (ctx.engines?.hmem) {
+    brief.moves = applyMemoriesToMoves(ctx.engines.hmem, brief.moves);
+  }
+
+  return brief;
 }

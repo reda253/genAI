@@ -1,6 +1,7 @@
 import { loadConfig, loadDotEnv } from './config.ts';
 import { autoDetect, createNightshift } from './llm/nightshift.ts';
 import { createOrchestrator } from './agents/orchestrator.ts';
+import { createEngines } from './engines/index.ts';
 import { buildServer } from './server.ts';
 import { createZetarisClient } from './zetaris/client.ts';
 
@@ -18,8 +19,11 @@ if ((await llm.status()) === 'offline') {
   }
 }
 
+const engines = createEngines(llm);
+
 const orchestrator = createOrchestrator({
   llm,
+  engines,
   logsDir: config.logsDir,
   sql: zetaris.querySql,
   deepModel: config.meterless.deepModel,

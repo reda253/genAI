@@ -1,6 +1,7 @@
-// Explainer agent (P5): causal analysis with zero hallucination and strict evidence linking.
+// Explainer agent (P5 & P4): causal analysis with zero hallucination, evidence linking, and Markovian bounded reasoning.
 import type { AgentContext, Cause, Explanation, Finding } from './types.ts';
 import { stripReasoning } from '../llm/nightshift.ts';
+import { runExplainerInvestigation } from '../engines/markovianAdapter.ts';
 
 /**
  * The model's JSON answer. Nemotron Ultra sometimes writes its reasoning into the reply without a
@@ -53,6 +54,22 @@ export async function explainer(
     ? input.findings.filter(f => f.id === input.finding_id)
     : input.findings;
 
+  // 1. If Markovian engine is available and active, execute bounded multi-step chunk investigation
+  if (ctx.engines?.markovian) {
+    try {
+      const inv = await runExplainerInvestigation(ctx.engines.markovian, {
+        question: input.question,
+        findingId: input.finding_id,
+        findings: input.findings,
+        generator: prompt => ctx.llm.generate(prompt),
+      });
+      return inv.explanation;
+    } catch {
+      // Fall through to LLM chat or deterministic fallback
+    }
+  }
+
+  // 2. Direct LLM chat synthesis
   try {
     const prompt = `You are the Explainer agent for Ledger Lens.
 Question: ${JSON.stringify(input.question)}
@@ -89,7 +106,7 @@ and amount_eur must be a number that appears in that finding (its impact or its 
     ctx.trace('llm_failed', { error: (e as Error).message });
   }
 
-  // Deterministic fallback based on input findings
+  // 3. Deterministic fallback based on input findings
   if (relevantFindings.length > 0) {
     const causes: Cause[] = relevantFindings.slice(0, 3).map((f, i) => ({
       rank: i + 1,

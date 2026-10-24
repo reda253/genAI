@@ -26,7 +26,15 @@ export interface Config {
   port: number;
   logsDir: string;
   meterless: { baseUrl: string; token: string; model: string; deepModel: string };
-  zetaris: { restUrl: string; apiKey: string; orgId: string; mock: boolean };
+  zetaris: {
+    restUrl: string;
+    apiKey: string;
+    orgId: string;
+    mock: boolean;
+    viewSchema: string;
+    queryLimit: number;
+    timeoutMs: number;
+  };
 }
 
 /** Loads the repo-root .env into process.env if it exists. */
@@ -53,6 +61,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
       apiKey: env.ZETARIS_API_KEY ?? '',
       orgId: env.ZETARIS_ORG_ID ?? '1',
       mock: env.ZETARIS_MOCK === '1' || env.ZETARIS_MOCK === 'true',
+      viewSchema: env.ZETARIS_VIEW_SCHEMA ?? 'ledger_lens',
+      queryLimit: Number(env.ZETARIS_QUERY_LIMIT) || 1000,
+      timeoutMs: Number(env.ZETARIS_TIMEOUT_MS) || 120_000,
     },
   };
 }

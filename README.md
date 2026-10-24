@@ -23,12 +23,40 @@ See [docs/plan.md](docs/plan.md) for the full architecture and work split, and [
 
 1. `cp .env.example .env` and fill in your own values. **Never commit `.env`.**
 2. Postgres: `docker compose -f infra/docker-compose.yml up -d`
-3. Data: `python data/load_postgres.py`
-4. Zetaris: `./zetaris/setup_zetaris.sh`
+3. Data: `python data/generate.py && python data/load_postgres.py`
+4. Zetaris: `./zetaris/setup_zetaris.sh` (registers the Postgres + FX sources, creates the four views, verifies the numbers)
 5. Backend: `cd backend && npm install && npm run dev`
 6. Web: `cd web && npm install && npm run dev`
 
-## Meterless Engines (P4)
+### Zetaris setup (P2)
+
+The Zetaris platform must be running first (Participant Setup Guide steps
+1.3–1.8; `./verify.sh` should print 9/9). Put your API key in `.env` and set
+`ZETARIS_MOCK=0` for the real views.
+
+```bash
+# registers ledger_lens_pg + fx_rest and creates the four contract views
+./zetaris/setup_zetaris.sh
+
+# preview the SQL without calling Zetaris
+./zetaris/setup_zetaris.sh --dry-run
+
+# re-check the numbers only
+./zetaris/setup_zetaris.sh --verify-only
+```
+
+The script prints the expected-value checks (unbilled hours, Adobe price rise,
+Webflow unused, Nordwind late payer, Kestrel underpricing, Figma duplicate,
+closing cash €8,420). On Linux the Postgres host is auto-detected; if your
+Zetaris containers use another address, set `ZETARIS_PG_HOST` to the
+docker-bridge or LAN IP. Full details, troubleshooting, and the screenshot
+checklist are in [zetaris/README.md](zetaris/README.md).
+
+Without Zetaris, keep `ZETARIS_MOCK=1`: the backend reads the committed view
+fixtures in `backend/src/zetaris/mock/` and still runs the whole pipeline.
+Rebuild them after regenerating data with `python zetaris/generate_mocks.py`.
+
+### Meterless Engines (P4)
 
 Ledger Lens integrates three reference engines from [Meterless](https://github.com/Meterless/Meterless) inside `backend/src/engines/`, wired to Meterless Nightshift for Nemotron generation:
 
@@ -46,8 +74,7 @@ Ledger Lens integrates three reference engines from [Meterless](https://github.c
 
 All engine conformance tests and adapter integration tests are passing. See [docs/engine-tests.md](docs/engine-tests.md) for full test execution evidence.
 
-_Sections to be filled in: Zetaris setup (P2), How the agents reason (P5)._
-
+_Remaining section to fill on the integration machine: How the agents reason (P5)._
 
 ## Git rules
 

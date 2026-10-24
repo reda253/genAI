@@ -11,7 +11,7 @@ Your objective is to inspect financial anomaly evidence extracted from Zetaris S
    - `price_rise`: Subscription price increased by > 15% between first and last charge.
    - `unused_subscription`: Subscription with no login for > 60 days (`days_since_login > 60`).
    - `late_payer`: Invoices overdue by > 30 days (`days_late > 30`) or unpaid past due date.
-   - `underpriced_service`: Hourly rate is below market rate for the service.
+   - `underpriced_service`: Hourly rate is more than 10% below the market rate for the service (`hourly_rate < market_rate * 0.9`).
    - `duplicate_charge`: Multiple charges in the same calendar month for the same subscription (`max_charges_in_a_month > 1`).
 3. **Financial Impact vs Cash at Risk:**
    - `monthly_impact_eur`: Ongoing recurring loss per month (e.g., wasted subscription cost, unbilled monthly hours value, monthly rate difference).

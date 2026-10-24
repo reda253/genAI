@@ -15,7 +15,7 @@ Routes are the 10 in `docs/contracts.md` §4. Try: `curl -X POST localhost:4000/
 
 | Owner | File | Notes |
 | --- | --- | --- |
-| P2 | `src/zetaris/client.ts` | export `querySql(sql): Promise<QueryResult>`, then pass it as `sql` in `src/main.ts` |
+| P2 | `src/zetaris/client.ts` | implemented: `querySql(sql)` is wired in `src/main.ts`; `ZETARIS_MOCK=1` uses `src/zetaris/mock/<view>.json`; live calls add the `ZETARIS_VIEW_SCHEMA` (default `ledger_lens`) prefix to unqualified contract views |
 | P4 | `src/engines/*` | the model function is `llm.generate(prompt)`; store decisions in `orchestrator.decide()` (marked `P4`) |
 | P5 | `src/agents/leakHunter.ts`, `explainer.ts`, `forecaster.ts`, `cfo.ts` | replace the stub bodies, keep the signatures; `ctx.sql`, `ctx.llm`, `ctx.trace` are there |
 | P6 | `web/src/mock/*.json` | same shapes the API returns |

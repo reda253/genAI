@@ -1,0 +1,36 @@
+# Local Postgres for Ledger Lens.
+#
+# Start from the repo root:
+#   docker compose -f infra/docker-compose.yml up -d
+#
+# To use the values from the repo-root .env instead of the development defaults:
+#   docker compose --env-file .env -f infra/docker-compose.yml up -d
+#
+# The official Postgres image only applies POSTGRES_* values when the data
+# volume is first created. If you change the password later, reset with:
+#   docker compose -f infra/docker-compose.yml down -v
+name: ledger-lens
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: ledger-lens-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-ledger_lens}
+      POSTGRES_USER: ${POSTGRES_USER:-ledger}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ledger_dev}
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - ledger_lens_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+
+volumes:
+  ledger_lens_pgdata:
+    name: ledger_lens_pgdata

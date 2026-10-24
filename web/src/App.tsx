@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { api } from './api';
 import type { Brief, Finding, Forecast, Explanation, HealthResponse, Scenario } from './types';
+import type { Currency } from './currency';
 import { Navbar, type NavTab } from './components/Navbar';
 import { ParticleBackground } from './components/ParticleBackground';
 import { EvidenceDrawer } from './components/EvidenceDrawer';
@@ -13,6 +14,7 @@ import { ExplainerPage } from './pages/ExplainerPage';
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<NavTab>('brief');
   const [isMockMode, setIsMockMode] = useState<boolean>(api.getIsMockMode());
+  const [currency, setCurrency] = useState<Currency>('EUR');
   const [health, setHealth] = useState<HealthResponse | null>(null);
 
   // Core Data States
@@ -127,6 +129,8 @@ export const App: React.FC = () => {
         isMockMode={isMockMode}
         onToggleMockMode={(val) => api.setMockMode(val)}
         health={health}
+        currency={currency}
+        onToggleCurrency={setCurrency}
         onTriggerRun={() => setIsRunModalOpen(true)}
       />
 

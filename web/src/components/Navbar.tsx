@@ -11,6 +11,7 @@ import {
   ChevronDown,
 } from 'lucide-react';
 import type { HealthResponse } from '../types';
+import type { Currency } from '../currency';
 
 export type NavTab = 'brief' | 'leaks' | 'forecast' | 'explainer';
 
@@ -20,6 +21,8 @@ interface NavbarProps {
   isMockMode: boolean;
   onToggleMockMode: (val: boolean) => void;
   health: HealthResponse | null;
+  currency: Currency;
+  onToggleCurrency: (c: Currency) => void;
   onTriggerRun: () => void;
 }
 
@@ -29,6 +32,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   isMockMode,
   onToggleMockMode,
   health,
+  currency,
+  onToggleCurrency,
   onTriggerRun,
 }) => {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
@@ -134,6 +139,28 @@ export const Navbar: React.FC<NavbarProps> = ({
                   }`}
                 />
               </span>
+            </div>
+
+            {/* Currency Switcher (EUR / MAD) */}
+            <div className="flex items-center bg-slate-900 border border-slate-800 rounded-lg p-0.5 text-xs font-mono">
+              <button
+                onClick={() => onToggleCurrency('EUR')}
+                className={`px-2 py-0.5 rounded-md font-semibold transition-all cursor-pointer ${
+                  currency === 'EUR' ? 'bg-slate-800 text-emerald-400 shadow-sm' : 'text-slate-400 hover:text-slate-200'
+                }`}
+                title="Base Currency: EUR (€)"
+              >
+                € EUR
+              </button>
+              <button
+                onClick={() => onToggleCurrency('MAD')}
+                className={`px-2 py-0.5 rounded-md font-semibold transition-all cursor-pointer ${
+                  currency === 'MAD' ? 'bg-slate-800 text-emerald-400 shadow-sm' : 'text-slate-400 hover:text-slate-200'
+                }`}
+                title="Zetaris FX API Rate: ~10.82 MAD / 1 EUR"
+              >
+                MAD
+              </button>
             </div>
 
             {/* Mock / Live Toggle */}

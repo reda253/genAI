@@ -53,12 +53,14 @@ export function applyMemoriesToMoves(
   moves: Move[],
 ): Move[] {
   const updatedMoves = moves.map(m => ({ ...m }));
+  let hasAnyMemory = false;
 
   for (const move of updatedMoves) {
     const query = `${move.action_type} ${move.title}`;
     const result = hmem.query(query, { topN: 2, threshold: 0.05 });
 
     if (result.memories.length > 0) {
+      hasAnyMemory = true;
       const best = result.memories[0].memory;
       const text = (best.content || '').toLowerCase();
 
@@ -77,6 +79,10 @@ export function applyMemoriesToMoves(
         move.monthly_impact_eur = move.monthly_impact_eur * 1.5;
       }
     }
+  }
+
+  if (!hasAnyMemory) {
+    return updatedMoves;
   }
 
   // Sort by urgency ('high' > 'medium' > 'low') then monthly_impact_eur descending

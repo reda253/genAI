@@ -23,7 +23,7 @@ describe('Demo Memory Moment (H-MEM + World Model live integration)', () => {
     });
     const app = buildServer({
       orchestrator,
-      checks: { zetaris: async () => true, nightshift: async () => true },
+      checks: { zetaris: async () => true, nightshift: async () => 'online' },
     });
 
     // 1. Initial Run (Morning Brief)
@@ -38,19 +38,19 @@ describe('Demo Memory Moment (H-MEM + World Model live integration)', () => {
     const brief1 = brief1Res.json();
 
     expect(brief1.moves).toHaveLength(3);
-    const initialM003 = brief1.moves.find((m: any) => m.id === 'm003');
-    expect(initialM003).toBeDefined();
-    expect(initialM003.status).toBe('pending');
-    expect(initialM003.memory_note).toBeNull();
-    expect(initialM003.urgency).toBe('medium');
+    const initialM001 = brief1.moves.find((m: any) => m.id === 'm001');
+    expect(initialM001).toBeDefined();
+    expect(initialM001.status).toBe('pending');
+    expect(initialM001.memory_note).toBeNull();
+    expect(initialM001.urgency).toBe('high');
 
-    // 3. Sara acts: Sara REJECTS move m003 (Cancel unused Webflow plan)
+    // 3. Sara acts: Sara REJECTS move m001
     const decisionRes = await app.inject({
       method: 'POST',
-      url: '/api/moves/m003/decision',
+      url: '/api/moves/m001/decision',
       payload: {
         decision: 'reject',
-        note: 'Need Webflow for active client staging site',
+        note: 'Hold off on sending reminder for now',
       },
     });
     expect(decisionRes.statusCode).toBe(200);
@@ -67,12 +67,12 @@ describe('Demo Memory Moment (H-MEM + World Model live integration)', () => {
     expect(brief2Res.statusCode).toBe(200);
     const brief2 = brief2Res.json();
 
-    const rememberedM003 = brief2.moves.find((m: any) => m.id === 'm003');
-    expect(rememberedM003).toBeDefined();
+    const rememberedM001 = brief2.moves.find((m: any) => m.id === 'm001');
+    expect(rememberedM001).toBeDefined();
     // Verification: H-MEM memory note is dynamically attached to the move
-    expect(rememberedM003.memory_note).toContain('previously rejected');
-    // Urgency was lowered from 'medium' to 'low'
-    expect(rememberedM003.urgency).toBe('low');
+    expect(rememberedM001.memory_note).toContain('previously rejected');
+    // Urgency was lowered from 'high' to 'medium'
+    expect(rememberedM001.urgency).toBe('medium');
 
     // 6. World Model fact store verification: findings were ingested
     const f001Ctx = getEntityContext(engines.worldModel, 'f001');

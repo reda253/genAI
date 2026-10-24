@@ -1,10 +1,46 @@
 {
   "project": "Ledger Lens",
+  "track": "Track 03 - Reasoning Architecture",
+  "summary": "AI finance team for freelancers: finds money leaks in Zetaris data, explains why with evidence, simulates what-ifs, and ranks moves the user approves or rejects.",
+  "data": {
+    "platform": "Zetaris (local Docker)",
+    "access": "Agents read data only through Zetaris views via POST /sql-editor/sqls/run (SELECT only)",
+    "client": "backend/src/zetaris/client.ts",
+    "sources": ["Postgres (synthetic freelancer data, infra/docker-compose.yml)", "Public exchange-rate REST API (fx_rates)"],
+    "views": ["client_profitability", "cash_position", "subscription_usage", "ar_aging"]
+  },
+  "power": {
+    "ai_provider": "Meterless Nightshift (Meterless Runtime 1.4, provider contract v4)",
+    "provider_code": "backend/src/llm/nightshift.ts",
+    "provider_tests": "backend/test/nightshift.test.ts",
+    "base_url": "http://127.0.0.1:8088/v1",
+    "nemotron_models": [
+      { "model": "nvidia/nemotron-3.5-lightning-30b-a3b", "lane": "fast", "used_by": ["Leak Hunter"] },
+      { "model": "nvidia/nemotron-3-ultra-550b-a55b", "lane": "deep", "used_by": ["Explainer", "CFO"] }
+    ]
+  },
   "meterless_engines": [
-    { "engine": "world-model", "file": "backend/src/engines/world-model/", "test": "backend/test/engines/world-model/smoke.test.ts" },
-    { "engine": "hmem", "file": "backend/src/engines/hmem/", "test": "backend/test/engines/hmem/smoke.test.ts" },
-    { "engine": "markovian", "file": "backend/src/engines/markovian/", "test": "backend/test/engines/markovian/smoke.test.ts" }
+    {
+      "engine": "World Model",
+      "status": "implemented",
+      "role": "Shared state for agents: clients, vendors, invoices and findings ingested from Zetaris views; getContext(entityId) for agents",
+      "file": "backend/src/engines/world-model/",
+      "test": "backend/test/engines/world-model/smoke.test.ts"
+    },
+    {
+      "engine": "H-MEM",
+      "status": "implemented",
+      "role": "Remembers each approve/reject decision; top memories are retrieved at run start and change the CFO ranking",
+      "file": "backend/src/engines/hmem/",
+      "test": "backend/test/engines/hmem/smoke.test.ts"
+    },
+    {
+      "engine": "Markovian Thinking",
+      "status": "implemented",
+      "role": "Runs the Explainer investigation in bounded chunks, one hypothesis per chunk, carrying evidence forward",
+      "file": "backend/src/engines/markovian/",
+      "test": "backend/test/engines/markovian/smoke.test.ts"
+    }
   ],
-  "ai_provider": "Meterless Nightshift",
-  "models": []
+  "traces": "logs/<run_id>.jsonl, one line per agent step"
 }

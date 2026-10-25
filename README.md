@@ -113,7 +113,7 @@ With the native backend, Nightshift's token is read from `METERLESS_RUNTIME_TOKE
 | Findings vs answer key (needs a finished run) | `python evals/check_findings.py` |
 | Data and AI layers (Setup Guide, Check 3) | `.venv/Scripts/python scripts/smoke_test.py` (`pip install openai python-dotenv requests` once) |
 | Backend tests and typecheck | `cd backend && npm test && npx tsc --noEmit` |
-| Run traces from Docker | `docker compose cp app:/app/logs ./logs`, then open `logs/<run_id>.jsonl` |
+| Run traces from Docker | `docker compose cp app:/app/logs/. ./logs`, then open `logs/<run_id>.jsonl` |
 
 ## Configuration
 

@@ -19,6 +19,9 @@ services:
     ports: ["4000:4000"]
     env_file: [{ path: .env, required: false }]
     environment:
+      # Pinned: a native-dev PORT/HOST in .env must not break the published port and healthcheck.
+      PORT: "4000"
+      HOST: 0.0.0.0
       # localhost inside the container is the container: reach host services instead.
       ZETARIS_MOCK: ${ZETARIS_MOCK:-1}
       METERLESS_BASE_URL: ${DOCKER_METERLESS_BASE_URL:-http://host.docker.internal:8088/v1}

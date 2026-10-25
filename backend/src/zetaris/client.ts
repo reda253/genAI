@@ -334,7 +334,7 @@ export function createZetarisClient(
 ): ZetarisClient {
   const restUrl = cfg.restUrl.replace(/\/+$/, '');
   const viewSchema = cfg.viewSchema ?? 'ledger_lens';
-  const mockDir = cfg.mockDir ?? MOCK_DIR;
+  const mockDir = cfg.mockDir || MOCK_DIR;
   const fixtures = new Map<string, Promise<Record<string, unknown>[]>>();
 
   function loadFixture(view: string): Promise<Record<string, unknown>[]> {

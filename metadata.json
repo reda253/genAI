@@ -16,6 +16,13 @@
     "views": "zetaris/views/",
     "catalog": "zetaris/catalog.json",
     "mock_views": "backend/src/zetaris/mock/",
+    "entity_sql": "backend/src/zetaris/entitySql.ts",
+    "persona_b": {
+      "container": "ledger_lens_b",
+      "datasource": "ledger_lens_pg_b",
+      "setup": "./zetaris/setup_zetaris.sh --persona b",
+      "mock_views": "backend/src/zetaris/mock/b/"
+    },
     "verify": "./zetaris/setup_zetaris.sh --verify-only"
   },
   "power": {

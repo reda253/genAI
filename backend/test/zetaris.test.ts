@@ -1,3 +1,6 @@
+import { mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import {
   assertSelectOnly,
   createZetarisClient,
@@ -177,5 +180,20 @@ describe('mock client', () => {
 
   it('rejects a query it cannot stand in for', async () => {
     await expect(client().querySql('SELECT * FROM unknown_view')).rejects.toThrow(ZetarisError);
+  });
+
+  it('reads fixtures from a ZETARIS_MOCK_DIR override', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'zetaris-mock-'));
+    writeFileSync(
+      join(dir, 'client_profitability.json'),
+      JSON.stringify([{ client_id: 'c99', client_name: 'Persona B', unbilled_hours: 3 }]),
+    );
+    const custom = createZetarisClient(
+      { restUrl: 'http://unused', apiKey: '', orgId: '1', mock: true, mockDir: dir },
+      undefined,
+      fixedNow,
+    );
+    const result = await custom.querySql('SELECT client_id, client_name FROM client_profitability');
+    expect(result.rows).toEqual([{ client_id: 'c99', client_name: 'Persona B' }]);
   });
 });

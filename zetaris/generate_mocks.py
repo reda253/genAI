@@ -15,6 +15,7 @@ The generated files are committed; data/out is not.
 
 from __future__ import annotations
 
+import argparse
 import csv
 import json
 from collections import defaultdict
@@ -46,15 +47,15 @@ def month_start(value: date) -> date:
     return date(value.year, value.month, 1)
 
 
-def load_rows(table: str) -> list[dict[str, str]]:
-    path = DATA_DIR / f"{table}.csv"
+def load_rows(table: str, data_dir: Path) -> list[dict[str, str]]:
+    path = data_dir / f"{table}.csv"
     if not path.exists():
         raise SystemExit(f"missing {path}; run `python data/generate.py` first")
     with path.open(encoding="utf-8", newline="") as handle:
         return list(csv.DictReader(handle))
 
 
-def load_dataset() -> dict[str, list[dict]]:
+def load_dataset(data_dir: Path) -> dict[str, list[dict]]:
     clients = [
         {
             **row,
@@ -64,7 +65,7 @@ def load_dataset() -> dict[str, list[dict]]:
             "start_date": date.fromisoformat(row["start_date"]),
             "active": row["active"] == "true",
         }
-        for row in load_rows("clients")
+        for row in load_rows("clients", data_dir)
     ]
     subscriptions = [
         {
@@ -79,7 +80,7 @@ def load_dataset() -> dict[str, list[dict]]:
             if row["last_login_date"]
             else None,
         }
-        for row in load_rows("subscriptions")
+        for row in load_rows("subscriptions", data_dir)
     ]
     invoices = [
         {
@@ -90,7 +91,7 @@ def load_dataset() -> dict[str, list[dict]]:
             "hours_billed": Decimal(row["hours_billed"]),
             "amount": cents(row["amount"]),
         }
-        for row in load_rows("invoices")
+        for row in load_rows("invoices", data_dir)
     ]
     time_logs = [
         {
@@ -100,7 +101,7 @@ def load_dataset() -> dict[str, list[dict]]:
             "billable": row["billable"] == "true",
             "invoice_id": row["invoice_id"] or None,
         }
-        for row in load_rows("time_logs")
+        for row in load_rows("time_logs", data_dir)
     ]
     transactions = [
         {
@@ -110,7 +111,7 @@ def load_dataset() -> dict[str, list[dict]]:
             "invoice_id": row["invoice_id"] or None,
             "subscription_id": row["subscription_id"] or None,
         }
-        for row in load_rows("bank_transactions")
+        for row in load_rows("bank_transactions", data_dir)
     ]
     return {
         "clients": clients,
@@ -372,28 +373,74 @@ def assert_expected(
     assert round(sum(row["outflow"] for row in cash_position), 2) == 48802.0
 
 
-def write_json(name: str, rows: list[dict]) -> None:
-    path = MOCK_DIR / f"{name}.json"
+def assert_basic(
+    client_profitability: list[dict],
+    cash_position: list[dict],
+    subscription_usage: list[dict],
+    ar_aging: list[dict],
+) -> None:
+    """Generic invariants for a persona whose exact expectations live in its answer key."""
+    assert client_profitability, "client_profitability is empty"
+    assert subscription_usage, "subscription_usage is empty"
+    assert ar_aging, "ar_aging is empty"
+    assert cash_position, "cash_position is empty"
+    assert cash_position[-1]["date"] == WINDOW_END.isoformat()
+    for row in client_profitability:
+        assert row["client_id"], row
+        assert row["month"], row
+        assert float(row["hours_logged"]) >= 0
+        assert float(row["hours_billed"]) >= 0
+    for row in subscription_usage:
+        assert row["subscription_id"], row
+    for row in ar_aging:
+        assert row["invoice_id"], row
+        assert row["bucket"] in {"on_time", "1-30", "31-60", "61-90", "90+"}
+
+
+def write_json(name: str, rows: list[dict], mock_dir: Path) -> None:
+    mock_dir.mkdir(parents=True, exist_ok=True)
+    path = mock_dir / f"{name}.json"
     path.write_text(json.dumps(rows, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    print(f"wrote {path.relative_to(ROOT)} ({len(rows)} rows)")
+    try:
+        shown = path.relative_to(ROOT)
+    except ValueError:
+        shown = path
+    print(f"wrote {shown} ({len(rows)} rows)")
 
 
 def main() -> None:
-    data = load_dataset()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--persona",
+        choices=("a", "b"),
+        default="a",
+        help="a = demo dataset in data/out; b = generalization dataset in data/out/b",
+    )
+    parser.add_argument("--input-dir", type=Path, help="override the CSV directory")
+    parser.add_argument("--output-dir", type=Path, help="override the mock JSON directory")
+    args = parser.parse_args()
+
+    data_dir = args.input_dir or (DATA_DIR / "b" if args.persona == "b" else DATA_DIR)
+    mock_dir = args.output_dir or (MOCK_DIR / "b" if args.persona == "b" else MOCK_DIR)
+
+    data = load_dataset(data_dir)
     client_profitability = build_client_profitability(data)
     cash_position = build_cash_position(data)
     subscription_usage = build_subscription_usage(data)
     ar_aging = build_ar_aging(data)
     fx_rates = build_fx_rates()
 
-    assert_expected(client_profitability, cash_position, subscription_usage, ar_aging)
+    if args.persona == "a":
+        assert_expected(client_profitability, cash_position, subscription_usage, ar_aging)
+    else:
+        assert_basic(client_profitability, cash_position, subscription_usage, ar_aging)
 
-    MOCK_DIR.mkdir(parents=True, exist_ok=True)
-    write_json("client_profitability", client_profitability)
-    write_json("cash_position", cash_position)
-    write_json("subscription_usage", subscription_usage)
-    write_json("ar_aging", ar_aging)
-    write_json("fx_rates", fx_rates)
+    print(f"Mock views for persona {args.persona.upper()} from {data_dir}")
+    write_json("client_profitability", client_profitability, mock_dir)
+    write_json("cash_position", cash_position, mock_dir)
+    write_json("subscription_usage", subscription_usage, mock_dir)
+    write_json("ar_aging", ar_aging, mock_dir)
+    write_json("fx_rates", fx_rates, mock_dir)
 
 
 if __name__ == "__main__":

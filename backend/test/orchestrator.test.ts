@@ -46,6 +46,17 @@ test('trace has start/done for 4 steps', async () => {
   ]);
 });
 
+test('world model ingest traces the entity count from full view rows', async () => {
+  const { o, logsDir } = make();
+  const { run_id } = o.startRun();
+  await o.wait(run_id);
+  const lines = readFileSync(join(logsDir, `${run_id}.jsonl`), 'utf8').trim().split('\n').map(l => JSON.parse(l));
+  const ingested = lines.find(l => l.event === 'world_model_ingested');
+  expect(ingested).toBeDefined();
+  expect(ingested.step).toBe('leak_hunter');
+  expect(ingested.data.entities).toBe(79);
+});
+
 test('second start while running throws RunInProgressError', async () => {
   const { o } = make();
   const { run_id } = o.startRun();

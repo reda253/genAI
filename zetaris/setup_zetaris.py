@@ -8,7 +8,8 @@ What it does, in order:
   4. verifies the numbers against data/README.md §8 and prints PASS/FAIL.
 
 Usage:
-    ./zetaris/setup_zetaris.sh              # register + create + verify
+    ./zetaris/setup_zetaris.sh              # Persona A: register + create + verify
+    ./zetaris/setup_zetaris.sh --persona b  # Persona B: ledger_lens_b + ledger_lens_pg_b
     ./zetaris/setup_zetaris.sh --dry-run    # show statements, no network calls
     ./zetaris/setup_zetaris.sh --verify-only
     ./zetaris/setup_zetaris.sh --skip-verify
@@ -117,13 +118,30 @@ def require_quote_safe(name: str, value: str) -> None:
         )
 
 
-def substitutions(container: str, pg_datasource: str) -> dict[str, str]:
+def persona_names(persona: str) -> dict[str, str]:
+    """Names for Persona A (default) or the generalization Persona B."""
+    if persona == "b":
+        return {
+            "container": env("ZETARIS_VIEW_SCHEMA_B") or "ledger_lens_b",
+            "datasource": env("ZETARIS_PG_DATASOURCE_B") or "ledger_lens_pg_b",
+            "database": env("POSTGRES_DB_B") or "ledger_lens_b",
+        }
+    return {
+        "container": env("ZETARIS_VIEW_SCHEMA", "ledger_lens"),
+        "datasource": env("ZETARIS_PG_DATASOURCE", "ledger_lens_pg"),
+        "database": env("POSTGRES_DB", "ledger_lens"),
+    }
+
+
+def substitutions(
+    container: str, pg_datasource: str, database: str
+) -> dict[str, str]:
     password = env("POSTGRES_PASSWORD", "ledger_dev")
     values = {
         "__PG_DATASOURCE__": pg_datasource,
         "__PG_HOST__": detect_pg_host(),
         "__PG_PORT__": env("POSTGRES_PORT", "5433"),
-        "__PG_DATABASE__": env("POSTGRES_DB", "ledger_lens"),
+        "__PG_DATABASE__": database,
         "__PG_USER__": env("POSTGRES_USER", "ledger"),
         "__PG_PASSWORD__": password,
         "__VIEW_CONTAINER__": container,
@@ -480,12 +498,19 @@ def main() -> int:
     parser.add_argument("--dry-run", action="store_true", help="print SQL, call nothing")
     parser.add_argument("--verify-only", action="store_true", help="skip registration")
     parser.add_argument("--skip-verify", action="store_true", help="do not run the number checks")
+    parser.add_argument(
+        "--persona",
+        choices=("a", "b"),
+        default="a",
+        help="a = demo persona (default); b = generalization container/datasource/database",
+    )
     args = parser.parse_args()
 
     load_env()
-    container = env("ZETARIS_VIEW_SCHEMA", "ledger_lens")
-    pg_datasource = env("ZETARIS_PG_DATASOURCE", "ledger_lens_pg")
-    values = substitutions(container, pg_datasource)
+    names = persona_names(args.persona)
+    container = names["container"]
+    pg_datasource = names["datasource"]
+    values = substitutions(container, pg_datasource, names["database"])
 
     statements: list[tuple[Path, str]] = []
     for path in setup_files(container):
@@ -494,9 +519,21 @@ def main() -> int:
         for sql in render_sql(path, values):
             statements.append((path, sql))
 
+    if args.persona == "b" and not args.skip_verify:
+        if args.verify_only:
+            raise SetupError(
+                "Persona B has no built-in expected values. Run the P3/P5 eval "
+                "with data/answer_key_b.json instead, or pass --skip-verify."
+            )
+        print("Persona B: built-in Persona A number checks are skipped.")
+        args.skip_verify = True
+
     if args.dry_run:
-        print(f"Zetaris setup dry run ({len(statements)} statements)")
+        print(f"Zetaris setup dry run ({len(statements)} statements, persona {args.persona.upper()})")
         print(f"  REST URL: {env('ZETARIS_REST_URL', 'http://localhost:8888/api/v1.0')}")
+        print(f"  Postgres DB: {names['database']}")
+        print(f"  Datasource: {pg_datasource}")
+        print(f"  Container: {container}")
         print(f"  Postgres seen as: {values['__PG_HOST__']}:{values['__PG_PORT__']}")
         for path, sql in statements:
             masked = re.sub(r'password\s+"[^"]*"', 'password "***"', sql, flags=re.IGNORECASE)

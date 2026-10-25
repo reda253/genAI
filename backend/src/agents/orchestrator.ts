@@ -7,6 +7,7 @@ import { cfo } from './cfo.ts';
 import { createEngines, type Engines } from '../engines/index.ts';
 import { recordDecision } from '../engines/hmemAdapter.ts';
 import { ingestZetarisData } from '../engines/worldModelAdapter.ts';
+import { countEntities, fetchEntityRows } from '../zetaris/entitySql.ts';
 import type {
   AgentContext, Brief, Explanation, Finding, Forecast, Llm, Move, RunStatus, RunStep, Scenario,
 } from './types.ts';
@@ -58,14 +59,21 @@ export function createOrchestrator(deps: OrchestratorDeps) {
       return out;
     };
     try {
-      const findings = await step('leak_hunter', ctx => agents.leakHunter(ctx));
-      if (engines?.worldModel) {
-        try {
-          await ingestZetarisData(engines.worldModel, { findings }, status.run_id);
-        } catch {
-          // non-blocking
+      const findings = await step('leak_hunter', async (ctx) => {
+        const findings = await agents.leakHunter(ctx);
+        // I3: enrich the World Model with full view rows, not just findings.
+        // Non-blocking: a Zetaris view hiccup must not fail the morning brief.
+        if (engines?.worldModel) {
+          try {
+            const rows = await fetchEntityRows(ctx.sql);
+            await ingestZetarisData(engines.worldModel, { ...rows, findings }, status.run_id);
+            ctx.trace('world_model_ingested', { entities: countEntities(rows, findings) });
+          } catch {
+            // findings are still valid without the entity graph
+          }
         }
-      }
+        return findings;
+      });
       const explanation = await step('explainer', ctx => agents.explainer(ctx, { question: DEFAULT_QUESTION, finding_id: null, findings }));
       const forecast = await step('forecaster', ctx => agents.forecaster(ctx, { type: 'baseline' }));
       const brief = await step('cfo', ctx => agents.cfo(ctx, { findings, forecast, explanation }));

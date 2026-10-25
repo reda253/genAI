@@ -347,7 +347,7 @@ P2 owns the Zetaris views; P5 owns the agent logic and prompts; P6 owns the dash
 
 ---
 
-## 12. Sources, provenance, and limitations
+## 12. Sources, provenance, and Zetaris registration (P2 + P3)
 
 ### Synthetic data
 
@@ -394,23 +394,30 @@ These values are also written to `data/out/summary.json` by the generator.
 
 `./zetaris/setup_zetaris.sh` is the one-command setup. It:
 
-1. registers the synthetic Postgres source `ledger_lens_pg` and imports the
-   five tables;
+1. creates the synthetic Postgres source `ledger_lens_pg` (`CREATE DATASOURCE`,
+   PostgreSQL JDBC) and imports the five tables;
 2. creates the `ledger_lens` SchemaStore container;
 3. creates the four contract views: `client_profitability`, `cash_position`,
    `subscription_usage`, and `ar_aging`;
-4. registers the public REST source `fx_rest` and creates the display-only
-   `fx_rates` view;
+4. registers the public REST source `fx_rest`, including the
+   `fx_rest.eur_reference` table, and creates the display-only `fx_rates` view;
 5. verifies the expected numbers from section 8 and prints `PASS`/`FAIL`.
 
 Use `./zetaris/setup_zetaris.sh --dry-run` to preview the SQL without calling
 Zetaris, or `--verify-only` to re-run the number checks. The setup needs a
 running Zetaris instance and `ZETARIS_API_KEY` in `.env`.
 
-From inside Zetaris containers, `localhost` means the container itself. The
-script uses the Linux Docker bridge address by default; set `ZETARIS_PG_HOST`
-to override it. See [zetaris/README.md](../zetaris/README.md) for the full
-registration and troubleshooting details.
+The host is the machine as seen **from inside the Zetaris containers**, not the
+host's `localhost`:
+
+- Docker Desktop (Windows/WSL/macOS): `host.docker.internal`
+- Linux native: the docker0/bridge IP or the LAN IP; set `ZETARIS_PG_HOST` if
+  auto-detection is wrong
+- Port: the host-published **5433**, not the container's 5432
+
+See [zetaris/README.md](../zetaris/README.md) for the full registration and
+troubleshooting details. The view/column catalog is
+[`zetaris/catalog.json`](../zetaris/catalog.json).
 
 ### FX source and licence
 
@@ -446,7 +453,27 @@ docker compose up -d --build
 ```
 
 The seed container runs the same generator and loader. To confirm
-determinism, use the byte-identical hash check in section 9.
+determinism, use the byte-identical hash check in section 9, or:
+
+```bash
+python data/generate.py && sha256sum data/out/*.csv data/answer_key.json > /tmp/run-a
+python data/generate.py && sha256sum data/out/*.csv data/answer_key.json > /tmp/run-b
+diff /tmp/run-a /tmp/run-b
+```
+
+### Mock views (no Zetaris)
+
+`backend/src/zetaris/mock/*.json` mirrors the four views and is generated from
+the same CSVs:
+
+```bash
+python data/generate.py
+python zetaris/generate_mocks.py             # persona A
+python zetaris/generate_mocks.py --persona b # persona B, when P3 has generated data/out/b
+```
+
+With `ZETARIS_MOCK=1`, the backend reads those fixtures; with `ZETARIS_MOCK=0`,
+it calls Zetaris through `backend/src/zetaris/client.ts` (SELECT only).
 
 ### Limitations
 
@@ -468,5 +495,6 @@ determinism, use the byte-identical hash check in section 9.
 - `ZETARIS_MOCK=1` uses committed fixtures for local and demo runs; it is not a
   live Zetaris query. The default Docker setup uses mock mode unless
   `ZETARIS_MOCK=0` is set.
+- The demo date is fixed at **2026-10-01**; views never use `CURRENT_DATE`.
 - The dataset is frozen at `data-v1`. Changing it requires a new version, a new
   tag, and notification to P2, P5, and P6.

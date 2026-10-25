@@ -6,8 +6,16 @@
     "platform": "Zetaris (local Docker)",
     "access": "Agents read data only through Zetaris views via POST /sql-editor/sqls/run (SELECT only)",
     "client": "backend/src/zetaris/client.ts",
-    "sources": ["Postgres (synthetic freelancer data, infra/docker-compose.yml)", "Public exchange-rate REST API (fx_rates)"],
-    "views": ["client_profitability", "cash_position", "subscription_usage", "ar_aging"]
+    "sources": [
+      "Postgres (synthetic freelancer data, infra/docker-compose.yml)",
+      "Public exchange-rate REST API (fx_rates)"
+    ],
+    "views": [
+      "client_profitability",
+      "cash_position",
+      "subscription_usage",
+      "ar_aging"
+    ]
   },
   "zetaris": {
     "container": "ledger_lens",
@@ -31,32 +39,117 @@
     "provider_tests": "backend/test/nightshift.test.ts",
     "base_url": "http://127.0.0.1:8088/v1",
     "nemotron_models": [
-      { "model": "nvidia/nemotron-3.5-lightning-30b-a3b", "lane": "fast", "used_by": ["Leak Hunter"] },
-      { "model": "nvidia/nemotron-3-ultra-550b-a55b", "lane": "deep", "used_by": ["Explainer", "CFO"] }
+      {
+        "model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+        "lane": "fast",
+        "used_by": [
+          "Leak Hunter (ranking)",
+          "Markovian engine (compressor)",
+          "World Model / H-MEM engine generate calls"
+        ]
+      },
+      {
+        "model": "nvidia/nemotron-3-ultra-550b-a55b",
+        "lane": "deep",
+        "used_by": [
+          "Explainer (Markovian investigation chunks)",
+          "CFO"
+        ]
+      }
     ]
   },
   "meterless_engines": [
     {
       "engine": "World Model",
-      "status": "implemented",
+      "status": "integrated",
       "role": "Shared state for agents: clients, vendors, invoices and findings ingested from Zetaris views; getContext(entityId) for agents",
       "file": "backend/src/engines/world-model/",
-      "test": "backend/test/engines/world-model/smoke.test.ts"
+      "test": "backend/test/engines/world-model/smoke.test.ts",
+      "adapter": "backend/src/engines/worldModelAdapter.ts",
+      "used_by": "orchestrator: ingests full Zetaris view rows + findings after Leak Hunter (backend/src/zetaris/entitySql.ts)",
+      "integration_tests": [
+        "backend/test/engines/adapters.test.ts",
+        "backend/test/engines/memoryMoment.test.ts"
+      ]
     },
     {
       "engine": "H-MEM",
-      "status": "implemented",
+      "status": "integrated",
       "role": "Remembers each approve/reject decision; top memories are retrieved at run start and change the CFO ranking",
       "file": "backend/src/engines/hmem/",
-      "test": "backend/test/engines/hmem/smoke.test.ts"
+      "test": "backend/test/engines/hmem/smoke.test.ts",
+      "adapter": "backend/src/engines/hmemAdapter.ts",
+      "used_by": "CFO: applyMemoriesToMoves changes ranking and adds memory_note; orchestrator.decide records each approve/reject",
+      "integration_tests": [
+        "backend/test/engines/adapters.test.ts",
+        "backend/test/engines/memoryMoment.test.ts"
+      ]
     },
     {
       "engine": "Markovian Thinking",
-      "status": "implemented",
+      "status": "integrated",
       "role": "Runs the Explainer investigation in bounded chunks, one hypothesis per chunk, carrying evidence forward",
       "file": "backend/src/engines/markovian/",
-      "test": "backend/test/engines/markovian/smoke.test.ts"
+      "test": "backend/test/engines/markovian/smoke.test.ts",
+      "adapter": "backend/src/engines/markovianAdapter.ts",
+      "used_by": "Explainer: bounded multi-chunk investigation, answer grounded against finding evidence",
+      "integration_tests": [
+        "backend/test/engines/adapters.test.ts",
+        "backend/test/engines/memoryMoment.test.ts"
+      ]
     }
   ],
-  "traces": "logs/<run_id>.jsonl, one line per agent step"
+  "traces": {
+    "file": "logs/<run_id>.jsonl",
+    "api": "GET /api/runs/:id/trace",
+    "events": [
+      "start",
+      "done",
+      "llm_call {model, ms, ok}",
+      "checks_done",
+      "world_model_ingested",
+      "world_model_failed",
+      "markovian_done",
+      "memory_applied",
+      "llm_failed",
+      "llm_rejected"
+    ],
+    "example": "examples/trace.jsonl"
+  },
+  "prompts": {
+    "loader": "backend/src/agents/prompts.ts",
+    "files": [
+      "prompts/leak_hunter.md",
+      "prompts/explainer.md",
+      "prompts/cfo_rank.md"
+    ]
+  },
+  "evals": {
+    "findings": {
+      "script": "evals/check_findings.py",
+      "result": "6/6 found, 0 false alarms (live run, Zetaris + Nemotron)"
+    },
+    "numbers": {
+      "script": "evals/check_numbers.py"
+    },
+    "answer_key": "data/answer_key.json"
+  },
+  "run_history": {
+    "dir": "logs/runs/",
+    "api": "GET /api/changes"
+  },
+  "examples": "examples/",
+  "run": {
+    "docker": "docker compose up -d --build, then http://localhost:4000",
+    "sample_mode": "ZETARIS_MOCK=1 (default in Docker); agents fall back to deterministic answers without Nightshift"
+  },
+  "pre_existing": [
+    {
+      "component": "Meterless engine reference implementations (World Model, H-MEM, Markovian Thinking)",
+      "path": "backend/src/engines/world-model/, backend/src/engines/hmem/, backend/src/engines/markovian/",
+      "source": "https://github.com/Meterless/Meterless",
+      "license": "Apache-2.0",
+      "built_during_hackathon": "the adapters (backend/src/engines/*Adapter.ts) and their integration into the agents"
+    }
+  ]
 }

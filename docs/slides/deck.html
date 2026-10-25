@@ -1,0 +1,732 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=1280, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <title>Ledger Lens — Open Agent Hackathon 2026</title>
+    <link rel="stylesheet" href="deck.css" />
+  </head>
+  <body>
+    <!-- 1 · TITLE -->
+    <section class="slide title-slide" id="slide-1" aria-label="Title">
+      <div class="topline">
+        <div class="brand"><span class="brand-mark" aria-hidden="true"></span>Ledger Lens</div>
+        <div class="slide-num">01 / 10 · Track 03</div>
+      </div>
+
+      <div class="title-layout">
+        <div class="title-copy">
+          <div class="eyebrow">Open Agent Hackathon 2026</div>
+          <h1>Ledger <span class="accent">Lens</span></h1>
+          <p class="lede">An AI finance team for freelancers.</p>
+          <p class="sub">
+            It finds where the money leaks, proves every finding with data, and
+            recommends three moves a human approves or rejects.
+          </p>
+          <div class="chip-row">
+            <span class="chip"><span class="dot"></span>Track 03 — Reasoning Architecture</span>
+            <span class="chip">Zetaris · Meterless · NVIDIA Nemotron</span>
+          </div>
+        </div>
+
+        <div class="mini-stack" aria-label="The four agents">
+          <div class="mini-agent">
+            <span class="mini-num">01</span>
+            <div><b>Leak Hunter</b><small>6 SQL checks + ranking</small></div>
+            <span class="model">Nemotron 3.5<br />Lightning</span>
+          </div>
+          <div class="mini-agent">
+            <span class="mini-num">02</span>
+            <div><b>Explainer</b><small>cited causes</small></div>
+            <span class="model">Nemotron 3 Ultra<br />Markovian</span>
+          </div>
+          <div class="mini-agent">
+            <span class="mini-num">03</span>
+            <div><b>Forecaster</b><small>6-month cash + what-ifs</small></div>
+            <span class="model">deterministic<br />TypeScript</span>
+          </div>
+          <div class="mini-agent">
+            <span class="mini-num">04</span>
+            <div><b>CFO</b><small>3 ranked moves</small></div>
+            <span class="model">Nemotron 3 Ultra<br />H-MEM</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer-line">
+        <span>Open Agent Hackathon 2026</span>
+        <span>Draft v0.1 · 25 Oct 2026</span>
+      </div>
+      <aside class="notes">
+        Ledger Lens is an AI finance team for a freelancer. It finds where her
+        money leaks, proves each leak with data, and recommends three moves she
+        approves or rejects.
+      </aside>
+    </section>
+
+    <!-- 2 · PROBLEM -->
+    <section class="slide" id="slide-2" aria-label="The problem">
+      <div class="topline">
+        <div class="brand"><span class="brand-mark" aria-hidden="true"></span>Ledger Lens</div>
+        <div class="slide-num">02 / 10 · The problem</div>
+      </div>
+
+      <div class="eyebrow">The problem</div>
+      <h2>Sara has nine clients and <span class="accent">no CFO</span></h2>
+
+      <div class="problem-grid">
+        <div class="card persona-card">
+          <div class="persona-top">
+            <div class="avatar">SC</div>
+            <div>
+              <h3>Sara Cohen</h3>
+              <p>Freelance brand &amp; UI designer · Casablanca</p>
+            </div>
+          </div>
+          <div class="meta-row">
+            <span>9 clients</span><span>54 invoices</span><span>6 months</span><span>EUR</span>
+          </div>
+          <p>
+            Five tables of history: clients, invoices, time logs, subscriptions,
+            and bank transactions. The answers are there, spread across all five.
+          </p>
+          <div class="quote">
+            “My accounting tool tells me what happened. It never tells me what to
+            do next.”
+          </div>
+        </div>
+
+        <div class="leak-grid" aria-label="Six leaks">
+          <div class="leak-card">
+            <div class="leak-kicker"><span class="sq"></span>01 · Unbilled hours</div>
+            <b>€1,320<span class="muted">/mo</span></b>
+            <small>22 Atlas Co hours never invoiced</small>
+          </div>
+          <div class="leak-card">
+            <div class="leak-kicker"><span class="sq"></span>02 · Quiet price rise</div>
+            <b>€14<span class="muted">/mo</span></b>
+            <small>Adobe +20.9%: €66.99 → €80.99</small>
+          </div>
+          <div class="leak-card">
+            <div class="leak-kicker"><span class="sq"></span>03 · Unused tool</div>
+            <b>€29<span class="muted">/mo</span></b>
+            <small>Webflow unopened for 94 days</small>
+          </div>
+          <div class="leak-card">
+            <div class="leak-kicker"><span class="sq"></span>04 · Late payer</div>
+            <b class="risk">€4,800</b>
+            <small>Two Nordwind invoices, 33–47 days late</small>
+          </div>
+          <div class="leak-card">
+            <div class="leak-kicker"><span class="sq"></span>05 · Underpriced service</div>
+            <b>€540<span class="muted">/mo</span></b>
+            <small>Kestrel at €42/h vs €60/h market</small>
+          </div>
+          <div class="leak-card">
+            <div class="leak-kicker"><span class="sq"></span>06 · Duplicate charge</div>
+            <b>€15<span class="muted">/mo</span></b>
+            <small>Figma charged twice in August</small>
+          </div>
+        </div>
+      </div>
+
+      <div class="stat-strip">
+        <div class="stat"><b>€1,918<span class="muted">/mo</span></b><span>Recurring leaks</span></div>
+        <div class="stat"><b class="risk">€4,800</b><span>Cash at risk</span></div>
+        <div class="stat"><b>6</b><span>Planted leaks · 0 false alarms</span></div>
+      </div>
+
+      <div class="footer-line">
+        <span>Source: data/answer_key.json · data/out/summary.json</span>
+        <span>P3 · 02 / 10</span>
+      </div>
+      <aside class="notes">
+        Sara is a freelancer, not a finance team. Her data already contains the
+        answers, but they are spread across five tables. The leaks are small
+        enough to miss one by one and large enough to matter together: about
+        €1,918 a month, plus €4,800 stuck in overdue invoices.
+      </aside>
+    </section>
+
+    <!-- 3 · SOLUTION -->
+    <section class="slide" id="slide-3" aria-label="The solution">
+      <div class="topline">
+        <div class="brand"><span class="brand-mark" aria-hidden="true"></span>Ledger Lens</div>
+        <div class="slide-num">03 / 10 · The solution</div>
+      </div>
+
+      <div class="eyebrow">The solution</div>
+      <h2>A morning brief, <span class="accent">not another dashboard</span></h2>
+
+      <div class="solution-grid">
+        <div class="brief-mock" aria-label="Mock of the morning brief">
+          <div class="mock-top">
+            <span>Morning brief · demo 01 Oct 2026</span>
+            <span class="mock-live">live</span>
+          </div>
+          <div class="mock-cash">
+            €8,420
+            <small>cash today</small>
+          </div>
+          <div class="mock-metrics">
+            <div><b>€1,918</b><span>leaks / mo</span></div>
+            <div><b class="risk">€4,800</b><span>at risk</span></div>
+            <div><b class="accent">€1,860</b><span>top-3 / mo</span></div>
+          </div>
+
+          <div class="mock-move">
+            <span class="rank">01</span>
+            <div><b>Send payment reminder</b><small>Nordwind Studio · 47 days late</small></div>
+            <span class="amount risk">€4,800</span>
+          </div>
+          <div class="mock-move">
+            <span class="rank">02</span>
+            <div><b>Invoice 22 unbilled hours</b><small>Atlas Co · 12 Aug + 10 Sep</small></div>
+            <span class="amount">€1,320/mo</span>
+          </div>
+          <div class="mock-move">
+            <span class="rank">03</span>
+            <div><b>Renegotiate Kestrel rate</b><small>€42/h → €60/h market</small></div>
+            <span class="amount">€540/mo</span>
+          </div>
+
+          <div class="mock-actions">
+            <span class="approve">approve</span>
+            <span class="reject">reject</span>
+            <span class="reject">nothing sent automatically</span>
+          </div>
+          <div class="mock-note">
+            Top-3 monthly impact; the reminder unlocks €4,800 of cash at risk.
+          </div>
+        </div>
+
+        <div class="solution-points">
+          <div class="point">
+            <span class="point-num">01</span>
+            <div><h3>Six findings, each with proof</h3><p>Every finding stores the Zetaris SQL and the rows behind it.</p></div>
+          </div>
+          <div class="point">
+            <span class="point-num">02</span>
+            <div><h3>Three ranked moves</h3><p>Each move has a EUR impact, an action type, and a reason.</p></div>
+          </div>
+          <div class="point">
+            <span class="point-num">03</span>
+            <div><h3>Human keeps the decision</h3><p>Sara approves or rejects; nothing is sent automatically.</p></div>
+          </div>
+          <div class="point">
+            <span class="point-num">04</span>
+            <div><h3>Memory changes the next run</h3><p>H-MEM remembers the decision and re-ranks the next brief.</p></div>
+          </div>
+          <div class="point">
+            <span class="point-num">05</span>
+            <div><h3>Numbers never come from the model</h3><p>Every amount is read from a Zetaris view, not generated.</p></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="flow-strip">
+        <b>brief</b><span class="arrow">→</span><b>leak</b><span class="arrow">→</span><b>evidence</b><span class="arrow">→</span><b>why</b><span class="arrow">→</span><b>what-if</b><span class="arrow">→</span><b>draft</b><span class="arrow">→</span><b>reject</b><span class="arrow">→</span><b>rerun + memory</b>
+      </div>
+
+      <div class="footer-line">
+        <span>Source: README.md · docs/contracts.md §3</span>
+        <span>P3 · 03 / 10</span>
+      </div>
+      <aside class="notes">
+        The output is deliberately short: what changed, what it costs, and the
+        three decisions for today. The evidence stays one click away, and the
+        human keeps the decision.
+      </aside>
+    </section>
+
+    <!-- 4 · AGENTS -->
+    <section class="slide" id="slide-4" aria-label="How the agents work">
+      <div class="topline">
+        <div class="brand"><span class="brand-mark" aria-hidden="true"></span>Ledger Lens</div>
+        <div class="slide-num">04 / 10 · How the agents work</div>
+      </div>
+
+      <div class="eyebrow">How the agents work</div>
+      <h2>Four agents, <span class="accent">one evidence trail</span></h2>
+
+      <div class="pipeline">
+        <div class="agent-card">
+          <div class="step"><span>01</span><span>find</span></div>
+          <h3>Leak Hunter</h3>
+          <p>Six fixed SQL checks find the leaks; the fast model ranks and describes them.</p>
+          <span class="model-chip emerald">Nemotron 3.5 Lightning</span>
+          <span class="agent-output">→ findings f001–f006</span>
+        </div>
+        <div class="agent-card">
+          <div class="step"><span>02</span><span>explain</span></div>
+          <h3>Explainer</h3>
+          <p>Markovian reasoning on the deep model; every cause cites a finding.</p>
+          <span class="model-chip">Nemotron 3 Ultra · Markovian</span>
+          <span class="agent-output">→ cited explanation</span>
+        </div>
+        <div class="agent-card">
+          <div class="step"><span>03</span><span>forecast</span></div>
+          <h3>Forecaster</h3>
+          <p>Deterministic cash math in code, not a model. Six-month projection and what-ifs.</p>
+          <span class="model-chip">TypeScript · no model</span>
+          <span class="agent-output">→ 6-month cash + what-ifs</span>
+        </div>
+        <div class="agent-card">
+          <div class="step"><span>04</span><span>decide</span></div>
+          <h3>CFO</h3>
+          <p>Deep model ranks three moves; H-MEM changes the ranking from past decisions.</p>
+          <span class="model-chip">Nemotron 3 Ultra · H-MEM</span>
+          <span class="agent-output">→ 3 moves + memory note</span>
+        </div>
+      </div>
+
+      <div class="evidence-bar">
+        <div class="evidence-left">
+          <span class="pulse" aria-hidden="true"></span>
+          <div>
+            <b>Evidence + trace</b><br />
+            <span>6 findings · 3 moves · one line per step and model call</span>
+          </div>
+        </div>
+        <code>logs/&lt;run_id&gt;.jsonl</code>
+      </div>
+
+      <div class="critic-callout">
+        <span class="critic-badge">Critic loop</span>
+        <p>Reject a model answer that invents a number; retry once, then use the deterministic fallback.</p>
+        <span class="confirm">[confirm P5]</span>
+      </div>
+
+      <div class="footer-line">
+        <span>Source: docs/architecture.md · backend/src/agents/ · docs/contracts.md §5</span>
+        <span>P5 · 04 / 10</span>
+      </div>
+      <aside class="notes">
+        The important design choice is separation. SQL finds the facts. The
+        models rank, explain, and choose wording. Code does the cash math. If a
+        model answer is not grounded in the evidence, the critic rejects it and
+        the system falls back to a safe answer.
+      </aside>
+    </section>
+
+    <!-- 5 · ZETARIS -->
+    <section class="slide" id="slide-5" aria-label="Zetaris: the data layer">
+      <div class="topline">
+        <div class="brand"><span class="brand-mark" aria-hidden="true"></span>Ledger Lens</div>
+        <div class="slide-num">05 / 10 · Zetaris</div>
+      </div>
+
+      <div class="eyebrow">The data layer</div>
+      <h2>Agents never touch <span class="accent">raw tables</span></h2>
+
+      <div class="zetaris-diagram">
+        <div class="source-stack">
+          <div class="source-card">
+            <div class="source-kicker">Source 01 · Postgres</div>
+            <b>ledger_lens_pg</b>
+            <small>5 tables · clients, invoices, time logs, subscriptions, bank transactions</small>
+          </div>
+          <div class="source-card">
+            <div class="source-kicker">Source 02 · Public REST</div>
+            <b>fx_rest</b>
+            <small>EUR snapshot · CC0 1.0 licence</small>
+          </div>
+        </div>
+
+        <div class="diagram-arrow" aria-hidden="true">→</div>
+
+        <div class="zetaris-core">
+          <div class="core-label">Federated query layer</div>
+          <h3>Zetaris</h3>
+          <small>container ledger_lens · SELECT-only</small>
+          <div class="core-line"></div>
+          <div class="core-facts"><span>4 views</span><span>1 read path</span><span>querySql</span></div>
+        </div>
+
+        <div class="diagram-arrow" aria-hidden="true">→</div>
+
+        <div class="views-grid">
+          <div class="view-card"><b><span class="view-dot"></span>client_profitability</b><small>unbilled hours, rates, margin</small></div>
+          <div class="view-card"><b><span class="view-dot"></span>cash_position</b><small>cash today + runway</small></div>
+          <div class="view-card"><b><span class="view-dot"></span>subscription_usage</b><small>price changes, logins, duplicates</small></div>
+          <div class="view-card"><b><span class="view-dot"></span>ar_aging</b><small>overdue invoices + aging buckets</small></div>
+        </div>
+      </div>
+
+      <div class="fact-row">
+        <div class="fact"><b>Read path</b><span><code>querySql</code> is the only client</span></div>
+        <div class="fact"><b>Evidence</b><span>SQL + rows stored on every finding</span></div>
+        <div class="fact"><b>Setup</b><span><code>./zetaris/setup_zetaris.sh</code> · dry-run + verify-only</span></div>
+        <div class="fact"><b>Modes</b><span><code>ZETARIS_MOCK=1</code> fixtures · <code>0</code> live</span></div>
+      </div>
+
+      <div class="screenshot-slot tall">
+        [P2] Zetaris UI screenshot · four views · drop a 16:9 or wider image here
+      </div>
+
+      <div class="footer-line">
+        <span>Source: zetaris/README.md · docs/architecture.md · data/README.md §12</span>
+        <span>P3 + P2 · 05 / 10</span>
+      </div>
+      <aside class="notes">
+        Zetaris is not decoration. It is the contract between the data and the
+        agents. The agents see four views, not five raw tables, and every number
+        on screen can be traced back to a view query and its rows.
+      </aside>
+    </section>
+
+    <!-- 6 · REASONING STACK -->
+    <section class="slide" id="slide-6" aria-label="The reasoning stack">
+      <div class="topline">
+        <div class="brand"><span class="brand-mark" aria-hidden="true"></span>Ledger Lens</div>
+        <div class="slide-num">06 / 10 · Reasoning stack</div>
+      </div>
+
+      <div class="eyebrow">The reasoning stack</div>
+      <h2>Meterless engines + <span class="accent">NVIDIA Nemotron</span></h2>
+
+      <div class="reasoning-grid">
+        <div class="lane-stack">
+          <div class="lane-card fast">
+            <div class="lane-top">
+              <h3>Fast lane</h3>
+              <span class="lane-tag">rank + describe</span>
+            </div>
+            <p>Leak Hunter ranks and describes the six findings.</p>
+            <span class="lane-model">Nemotron 3.5 Lightning</span>
+            <span class="lane-foot">Output: ranked findings f001–f006</span>
+          </div>
+          <div class="lane-card deep">
+            <div class="lane-top">
+              <h3>Deep lane</h3>
+              <span class="lane-tag">explain + decide</span>
+            </div>
+            <p>Explainer and CFO produce cited causes and three ranked moves.</p>
+            <span class="lane-model">Nemotron 3 Ultra</span>
+            <span class="lane-foot">Output: explanation + three ranked moves</span>
+          </div>
+          <div class="stack-strip">
+            <b>Build:</b> TypeScript + Fastify · React + Vite + Tailwind · Postgres 16 · Docker · Zetaris · Meterless Nightshift
+          </div>
+        </div>
+
+        <div class="engine-grid">
+          <div class="engine-card">
+            <div class="engine-kicker"><span>Reasoning loop</span><span>Explainer</span></div>
+            <h3>Markovian</h3>
+            <p>Bounded step-by-step investigation; evidence is carried forward.</p>
+            <span class="engine-foot">inspect → cite → check → answer</span>
+          </div>
+          <div class="engine-card">
+            <div class="engine-kicker"><span>Memory</span><span>CFO</span></div>
+            <h3>H-MEM</h3>
+            <p>Remembers approve/reject decisions and changes the next ranking.</p>
+            <span class="engine-foot">decision → memory note → re-rank</span>
+          </div>
+          <div class="engine-card wide">
+            <div class="engine-kicker"><span>Shared state</span><span>Agents</span></div>
+            <h3>World Model <span class="confirm">[confirm P4]</span></h3>
+            <p>Current run ingests findings; entity rows are the next step.</p>
+            <span class="engine-foot">now: findings · next: clients, vendors, invoices</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="grounding-bar">
+        <span class="rule">Grounding rule</span>
+        <p>
+          A model may only cite amounts that appear in the finding or its evidence rows.
+          If Nightshift is offline, deterministic fallbacks keep the same numbers.
+          Full trace: <span class="mono">logs/&lt;run_id&gt;.jsonl</span>.
+        </p>
+      </div>
+
+      <div class="trace-strip">
+        <span class="trace-label">Trace</span>
+        <span>run_20261025_133016</span>
+        <span class="arrow">→</span>
+        <span>leak_hunter</span>
+        <span class="arrow">→</span>
+        <span>explainer</span>
+        <span class="arrow">→</span>
+        <span>forecaster</span>
+        <span class="arrow">→</span>
+        <span>cfo</span>
+        <span class="trace-meta">6 findings · 3 moves · 1 run</span>
+      </div>
+
+      <div class="footer-line">
+        <span>Source: docs/architecture.md · metadata.json · docs/engine-tests.md</span>
+        <span>P5 · 06 / 10</span>
+      </div>
+      <aside class="notes">
+        This is the reasoning architecture the track asks for. Nemotron does the
+        language work, but it is bounded by evidence. Markovian gives the
+        Explainer a step-by-step loop. H-MEM makes the next run different because
+        Sara made a decision. The deterministic fallback is deliberate: a demo
+        without an API key still finds the same six leaks.
+      </aside>
+    </section>
+
+    <!-- 7 · PRODUCT -->
+    <section class="slide" id="slide-7" aria-label="The product">
+      <div class="topline">
+        <div class="brand"><span class="brand-mark" aria-hidden="true"></span>Ledger Lens</div>
+        <div class="slide-num">07 / 10 · The product</div>
+      </div>
+
+      <div class="eyebrow">The product</div>
+      <h2>Four screens that <span class="accent">tell the story</span></h2>
+
+      <div class="screen-grid">
+        <div class="screen-card">
+          <div class="wireframe" aria-label="Brief screen wireframe">
+            <div class="wf-top"><span style="width: 42px"></span><span class="wf-pill"></span></div>
+            <div class="wf-title"></div>
+            <div class="wf-number"></div>
+            <div class="wf-cols">
+              <div class="wf-block tall"></div>
+              <div class="wf-block tall"></div>
+              <div class="wf-block tall"></div>
+            </div>
+          </div>
+          <div class="screen-caption"><b>Brief</b><span>01 · money headline + moves</span></div>
+        </div>
+
+        <div class="screen-card">
+          <div class="wireframe" aria-label="Leaks and evidence screen wireframe">
+            <div class="wf-top"><span style="width: 52px"></span><span class="wf-pill"></span></div>
+            <div class="wf-title"></div>
+            <div class="wf-row"><span class="wf-dot"></span><span class="wf-line"></span><span class="wf-badge"></span></div>
+            <div class="wf-row"><span class="wf-dot"></span><span class="wf-line"></span><span class="wf-badge"></span></div>
+            <div class="wf-row"><span class="wf-dot"></span><span class="wf-line"></span><span class="wf-badge"></span></div>
+            <div class="wf-row"><span class="wf-dot"></span><span class="wf-line"></span><span class="wf-badge"></span></div>
+          </div>
+          <div class="screen-caption"><b>Leaks + evidence</b><span>02 · SQL + rows</span></div>
+        </div>
+
+        <div class="screen-card">
+          <div class="wireframe" aria-label="Forecast screen wireframe">
+            <div class="wf-top"><span style="width: 38px"></span><span class="wf-pill"></span></div>
+            <div class="wf-title"></div>
+            <div class="wf-chart">
+              <svg viewBox="0 0 100 40" preserveAspectRatio="none" aria-hidden="true">
+                <path d="M0,30 C12,28 18,22 28,24 C40,26 46,15 58,17 C70,19 76,9 88,11 L100,7" fill="none" stroke="#34d399" stroke-width="1.6" vector-effect="non-scaling-stroke" />
+                <path d="M0,34 C14,33 20,30 30,31 C42,32 50,26 60,28 C72,30 80,23 90,24 L100,22" fill="none" stroke="#64748b" stroke-width="1.1" stroke-dasharray="3 2" vector-effect="non-scaling-stroke" />
+              </svg>
+            </div>
+            <div class="wf-pills"><span></span><span></span><span></span></div>
+          </div>
+          <div class="screen-caption"><b>Forecast</b><span>03 · six-month + what-ifs</span></div>
+        </div>
+
+        <div class="screen-card">
+          <div class="wireframe" aria-label="Why and timeline screen wireframe">
+            <div class="wf-top"><span style="width: 46px"></span><span class="wf-pill"></span></div>
+            <div class="wf-title"></div>
+            <div class="wf-steps">
+              <div class="wf-step"><span class="node"></span><span class="bar"></span></div>
+              <div class="wf-step"><span class="node"></span><span class="bar"></span></div>
+              <div class="wf-step"><span class="node"></span><span class="bar"></span></div>
+              <div class="wf-step"><span class="node"></span></div>
+            </div>
+            <div class="wf-row"><span class="wf-dot"></span><span class="wf-line"></span><span class="wf-badge"></span></div>
+            <div class="wf-row"><span class="wf-dot"></span><span class="wf-line"></span><span class="wf-badge"></span></div>
+            <div class="wf-row"><span class="wf-dot"></span><span class="wf-line"></span><span class="wf-badge"></span></div>
+          </div>
+          <div class="screen-caption"><b>Why? / timeline</b><span>04 · cited causes + trace</span></div>
+        </div>
+      </div>
+
+      <div class="placeholder-note">
+        [P6] Replace wireframes with 1920×1080 screenshots · optional 5th: draft modal “Never sent automatically”
+      </div>
+
+      <div class="footer-line">
+        <span>Source: README.md · web/src/pages/ · final-plan video story</span>
+        <span>P6 · 07 / 10</span>
+      </div>
+      <aside class="notes">
+        The demo follows one story: open the brief, inspect a leak, ask why, run a
+        what-if, draft the reminder, reject it, then rerun and show the memory
+        change. The screens are the proof that the architecture is a product, not
+        a diagram.
+      </aside>
+    </section>
+
+    <!-- 8 · PROOF -->
+    <section class="slide" id="slide-8" aria-label="Proof">
+      <div class="topline">
+        <div class="brand"><span class="brand-mark" aria-hidden="true"></span>Ledger Lens</div>
+        <div class="slide-num">08 / 10 · Proof</div>
+      </div>
+
+      <div class="eyebrow">Proof</div>
+      <h2>The numbers are <span class="accent">checkable</span></h2>
+
+      <div class="proof-grid">
+        <div class="proof-stat"><b class="emerald">6/6</b><span>Planted leaks found</span></div>
+        <div class="proof-stat"><b>0</b><span>False alarms</span></div>
+        <div class="proof-stat"><b>1,256</b><span>Data sanity checks</span></div>
+        <div class="proof-stat"><b>124</b><span>Backend tests · [P1 refresh]</span></div>
+      </div>
+
+      <div class="money-strip">
+        <div><b>€1,918<span class="muted">/mo</span></b><span>Recurring leaks</span></div>
+        <div><b class="risk">€4,800</b><span>Cash at risk</span></div>
+        <div><b>€8,420</b><span>Cash today</span></div>
+      </div>
+
+      <div class="terminal" aria-label="Verification commands and results">
+        <div><span class="prompt">$</span> python evals/check_findings.py --findings examples/findings.json</div>
+        <div class="ok">6/6 found, 0 false alarms</div>
+        <div><span class="prompt">$</span> python data/sanity_checks.py</div>
+        <div class="ok">All 1256 checks passed.</div>
+        <div><span class="prompt">$</span> cd backend &amp;&amp; npm test</div>
+        <div class="ok">124 passed (124)</div>
+      </div>
+
+      <div class="dataset-line">
+        Dataset: 9 clients · 10 subscriptions · 54 invoices · 132 time logs · 168 transactions · 942 billable hours
+      </div>
+
+      <div class="footer-line">
+        <span>Source: evals/check_findings.py · data/sanity_checks.py · data/answer_key.json · examples/</span>
+        <span>P3 · 08 / 10</span>
+      </div>
+      <aside class="notes">
+        The demo is not hand-waved. The eval knows the six planted leaks and
+        checks the live findings against them. The data layer has 1,256 checks.
+        The example run is in the repo, including the trace.
+      </aside>
+    </section>
+
+    <!-- 9 · UNIQUE -->
+    <section class="slide" id="slide-9" aria-label="What is unique">
+      <div class="topline">
+        <div class="brand"><span class="brand-mark" aria-hidden="true"></span>Ledger Lens</div>
+        <div class="slide-num">09 / 10 · What is unique</div>
+      </div>
+
+      <div class="eyebrow">What is unique</div>
+      <h2>Not a chatbot <span class="accent">over a spreadsheet</span></h2>
+
+      <div class="unique-grid">
+        <div class="unique-card" data-num="01">
+          <span class="unique-num">01</span>
+          <h3>Federated data</h3>
+          <p>Postgres + a public FX source behind one Zetaris layer.</p>
+          <span class="unique-proof">4 views · 1 read path</span>
+        </div>
+        <div class="unique-card" data-num="02">
+          <span class="unique-num">02</span>
+          <h3>Grounded reasoning</h3>
+          <p>SQL finds facts; models rank, explain, and choose wording; code does the forecast.</p>
+          <span class="unique-proof">every amount traced to a view row</span>
+        </div>
+        <div class="unique-card" data-num="03">
+          <span class="unique-num">03</span>
+          <h3>Visible engines</h3>
+          <p>World Model, H-MEM, and Markovian are tested integrations — not prompt labels.</p>
+          <span class="unique-proof">10 tests per engine</span>
+        </div>
+        <div class="unique-card" data-num="04">
+          <span class="unique-num">04</span>
+          <h3>Human in the loop</h3>
+          <p>Every move waits for approval, and the decision changes the next run.</p>
+          <span class="unique-proof">decision → memory → next run</span>
+        </div>
+        <div class="unique-card" data-num="05">
+          <span class="unique-num">05</span>
+          <h3>Honest fallback</h3>
+          <p>Without Nightshift, the same six leaks and numbers still work.</p>
+          <span class="unique-proof">6/6 leaks without an API key</span>
+        </div>
+      </div>
+
+      <div class="chain" aria-label="The evidence chain">
+        <b>Zetaris views</b><span class="arrow">→</span><b>evidence</b><span class="arrow">→</span><b>grounded model output</b><span class="arrow">→</span><b>deterministic math</b><span class="arrow">→</span><b>human decision</b><span class="arrow">→</span><b>memory changes next run</b>
+      </div>
+
+      <div class="closing">
+        Most finance demos stop at “the model read the data and wrote a summary.”
+        Ledger Lens stops at a decision.
+      </div>
+
+      <div class="footer-line">
+        <span>Source: README.md · docs/architecture.md · metadata.json</span>
+        <span>P3 + P5 · 09 / 10</span>
+      </div>
+      <aside class="notes">
+        Most finance demos stop at “the model read the data and wrote a summary.”
+        The difference here is the chain: Zetaris views, evidence, grounded model
+        output, deterministic math, a human decision, and memory that changes the
+        next run.
+      </aside>
+    </section>
+
+    <!-- 10 · FUTURE -->
+    <section class="slide" id="slide-10" aria-label="Future work">
+      <div class="topline">
+        <div class="brand"><span class="brand-mark" aria-hidden="true"></span>Ledger Lens</div>
+        <div class="slide-num">10 / 10 · Future work</div>
+      </div>
+
+      <div class="eyebrow">Future work</div>
+      <h2>From a synthetic demo to <span class="accent">a real finance team</span></h2>
+
+      <div class="roadmap">
+        <div class="phase now">
+          <span class="phase-label">Now · in the demo</span>
+          <h3>The loop works</h3>
+          <ul>
+            <li>Synthetic six-month dataset</li>
+            <li>Four Zetaris views + public FX source</li>
+            <li>Six findings, three ranked moves</li>
+            <li>Approve/reject + H-MEM memory</li>
+          </ul>
+        </div>
+        <div class="phase next">
+          <span class="phase-label">Next · real data</span>
+          <h3>Connect the sources</h3>
+          <ul>
+            <li>Real bank data through Open Banking</li>
+            <li>Invoicing and time-tracker connectors</li>
+            <li>Recurring charges detected from bank data</li>
+            <li>Usage from Google/Microsoft or vendor APIs</li>
+          </ul>
+        </div>
+        <div class="phase later">
+          <span class="phase-label">Later · product</span>
+          <h3>Make it a finance team</h3>
+          <ul>
+            <li>One database per user</li>
+            <li>Hosted AI instead of a desktop runtime</li>
+            <li>Receipts and partial payments</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="closing">
+        The architecture is already shaped for them: a new source becomes a new
+        Zetaris source and view, not a rewrite of the agents.
+      </div>
+
+      <div class="repo-line">
+        <span>Run locally: docker compose up · README.md</span>
+        <span>Dataset: synthetic · data-v1 @ 93e3af3</span>
+      </div>
+
+      <div class="footer-line">
+        <span>Source: docs/final-plan.md “Future-work slide content” · data/README.md §12</span>
+        <span>P3 · 10 / 10</span>
+      </div>
+      <aside class="notes">
+        The current dataset is synthetic and the connectors are the next step. The
+        architecture is already shaped for them: the agents read views, so a new
+        source becomes a new Zetaris source and view, not a rewrite of the agents.
+      </aside>
+    </section>
+  </body>
+</html>

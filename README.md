@@ -115,6 +115,9 @@ With the native backend, Nightshift's token is read from `METERLESS_RUNTIME_TOKE
 | Backend tests and typecheck | `cd backend && npm test && npx tsc --noEmit` |
 | Run traces from Docker | `docker compose cp app:/app/logs/. ./logs`, then open `logs/<run_id>.jsonl` |
 
+A captured run is in [`examples/`](examples/): the inputs, `brief.json`,
+`findings.json`, `explanation.json`, and a full `trace.jsonl`.
+
 ## Configuration
 
 Every variable in [.env.example](.env.example). All are optional for Level 1.
@@ -176,12 +179,14 @@ Submission details: [metadata.json](metadata.json).
 | Folder | Owner | What |
 | --- | --- | --- |
 | `docs/` | all | contracts, architecture, engine test evidence |
+| `docs/slides/` | P3 + P5 | Tuesday deck: outline, HTML/CSS source, PDF |
 | `infra/` | P3 | Postgres docker-compose (port 5433) |
 | `data/` | P3 | synthetic dataset, loader, answer key |
 | `zetaris/` | P2 | sources, 4 views, catalog, setup script |
 | `backend/` | P1, P2, P4, P5 | TypeScript / Node 20 / Fastify |
 | `prompts/` | P5 | agent prompts |
 | `evals/` | P3 | agents vs answer key |
+| `examples/` | P3 | one captured run: inputs, brief, findings, explanation, trace |
 | `web/` | P6 | React + Vite + Tailwind dashboard |
 | `scripts/` | P1 | smoke test |
 | `logs/` | — | run traces (generated, not committed) |

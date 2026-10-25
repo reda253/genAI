@@ -1,0 +1,13 @@
+{"ts":"2026-10-25T13:30:16.199Z","run_id":"run_20261025_133016","step":"leak_hunter","event":"start"}
+{"ts":"2026-10-25T13:30:16.228Z","run_id":"run_20261025_133016","step":"leak_hunter","event":"llm_failed","data":{"agent":"leak_hunter","error":"Meterless runtime token missing or placeholder: set METERLESS_RUNTIME_TOKEN from Nightshift > Console"}}
+{"ts":"2026-10-25T13:30:16.229Z","run_id":"run_20261025_133016","step":"leak_hunter","event":"done"}
+{"ts":"2026-10-25T13:30:16.236Z","run_id":"run_20261025_133016","step":"explainer","event":"start"}
+{"ts":"2026-10-25T13:30:16.241Z","run_id":"run_20261025_133016","step":"explainer","event":"markovian_done","data":{"chunks":0,"tokens":0}}
+{"ts":"2026-10-25T13:30:16.242Z","run_id":"run_20261025_133016","step":"explainer","event":"llm_rejected","data":{"reason":"Markovian answer had no cause citing a known finding"}}
+{"ts":"2026-10-25T13:30:16.243Z","run_id":"run_20261025_133016","step":"explainer","event":"llm_failed","data":{"error":"Meterless runtime token missing or placeholder: set METERLESS_RUNTIME_TOKEN from Nightshift > Console"}}
+{"ts":"2026-10-25T13:30:16.243Z","run_id":"run_20261025_133016","step":"explainer","event":"done"}
+{"ts":"2026-10-25T13:30:16.243Z","run_id":"run_20261025_133016","step":"forecaster","event":"start"}
+{"ts":"2026-10-25T13:30:16.286Z","run_id":"run_20261025_133016","step":"forecaster","event":"done"}
+{"ts":"2026-10-25T13:30:16.286Z","run_id":"run_20261025_133016","step":"cfo","event":"start"}
+{"ts":"2026-10-25T13:30:16.287Z","run_id":"run_20261025_133016","step":"cfo","event":"llm_failed","data":{"error":"Meterless runtime token missing or placeholder: set METERLESS_RUNTIME_TOKEN from Nightshift > Console"}}
+{"ts":"2026-10-25T13:30:16.292Z","run_id":"run_20261025_133016","step":"cfo","event":"done"}

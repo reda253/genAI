@@ -129,6 +129,53 @@ The mock client applies the simple `WHERE col op value` filters the Leak Hunter
 uses, so a mock run returns six findings, not 54 rows of noise. Switch to the
 real views with `ZETARIS_MOCK=0` after `setup_zetaris.sh` passes.
 
+## Persona B (generalization proof, I6)
+
+Persona B lives in a second Postgres database and a second Zetaris container. P3
+owns the data (`data/out/b/`, `data/answer_key_b.json`, `ledger_lens_b`); P2
+owns the Zetaris registration and mocks.
+
+```bash
+# P3 first:
+#   python data/generate.py --persona b
+#   python data/load_postgres.py --db ledger_lens_b
+#   python data/sanity_checks.py --db ledger_lens_b
+
+# Zetaris: ledger_lens_pg_b + ledger_lens_b + the same four views
+./zetaris/setup_zetaris.sh --persona b --dry-run
+./zetaris/setup_zetaris.sh --persona b
+
+# Mocks: backend/src/zetaris/mock/b/*.json
+python zetaris/generate_mocks.py --persona b
+```
+
+Persona B has no built-in expected values in the setup script (its answer key
+is P3's), so `--persona b` skips the Persona A checks and prints a note. Use the
+P5 eval instead:
+
+```bash
+python evals/check_findings.py --answer-key data/answer_key_b.json
+```
+
+Switch the backend to B (live or mock):
+
+```dotenv
+POSTGRES_DB=ledger_lens_b
+ZETARIS_VIEW_SCHEMA=ledger_lens_b
+ZETARIS_PG_DATASOURCE=ledger_lens_pg_b
+ZETARIS_MOCK=0
+```
+
+```dotenv
+# mock mode instead:
+ZETARIS_MOCK=1
+ZETARIS_MOCK_DIR=backend/src/zetaris/mock/b
+```
+
+The override names are `ZETARIS_VIEW_SCHEMA_B`, `ZETARIS_PG_DATASOURCE_B` and
+`POSTGRES_DB_B` if your instance uses different ones. Persona A stays the demo
+persona.
+
 ## Troubleshooting
 
 | Symptom | Fix |

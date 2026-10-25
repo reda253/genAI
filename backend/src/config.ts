@@ -1,9 +1,14 @@
 import { readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { join } from 'node:path';
+import { isAbsolute, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
+
+/** Relative paths in .env are relative to the repo root, not the backend cwd. */
+function resolveFromRoot(value: string): string {
+  return value ? (isAbsolute(value) ? value : join(root, value)) : '';
+}
 
 // The runtime writes its token to <stateDir>/proxy-token.
 // ponytail: Windows path verified; macOS/Linux paths are guesses, override with METERLESS_STATE_DIR.
@@ -35,6 +40,7 @@ export interface Config {
     orgId: string;
     mock: boolean;
     viewSchema: string;
+    mockDir: string;
     queryLimit: number;
     timeoutMs: number;
   };
@@ -67,6 +73,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
       orgId: env.ZETARIS_ORG_ID ?? '1',
       mock: env.ZETARIS_MOCK === '1' || env.ZETARIS_MOCK === 'true',
       viewSchema: env.ZETARIS_VIEW_SCHEMA ?? 'ledger_lens',
+      mockDir: resolveFromRoot(env.ZETARIS_MOCK_DIR ?? ''),
       queryLimit: Number(env.ZETARIS_QUERY_LIMIT) || 1000,
       timeoutMs: Number(env.ZETARIS_TIMEOUT_MS) || 120_000,
     },

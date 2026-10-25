@@ -7,6 +7,7 @@ import type {
   Move,
   RunStatus,
   Scenario,
+  TraceLine,
 } from './types';
 
 import rawBrief from './mock/brief.json';
@@ -133,6 +134,12 @@ class ApiService {
       return JSON.parse(JSON.stringify(mockBriefState));
     }
     return this.request<Brief>('/api/brief');
+  }
+
+  // GET /api/runs/:id/trace (contract v1.1). Mock mode has no trace.
+  public async getTrace(runId: string): Promise<TraceLine[]> {
+    if (this.useMocks) return [];
+    return this.request<TraceLine[]>(`/api/runs/${encodeURIComponent(runId)}/trace`);
   }
 
   // 5. GET /api/findings

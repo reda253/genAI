@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import type { Brief, Move } from '../types';
 import { MoveCard } from '../components/MoveCard';
+import { GroundingStats } from '../components/GroundingStats';
 
 interface BriefPageProps {
   brief: Brief | null;
@@ -205,8 +206,11 @@ export const BriefPage: React.FC<BriefPageProps> = ({
           <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
           <span>Strict Human-in-the-Loop: No invoices are sent and no subscriptions are cancelled without your approval.</span>
         </div>
-        <div className="font-mono text-slate-500 text-[11px] shrink-0">
-          NVIDIA Nemotron • Meterless Engines • Zetaris
+        <div className="flex flex-col sm:items-end gap-1 shrink-0">
+          <GroundingStats runId={brief.run_id} />
+          <div className="font-mono text-slate-500 text-[11px]">
+            NVIDIA Nemotron • Meterless Engines • Zetaris
+          </div>
         </div>
       </div>
     </div>

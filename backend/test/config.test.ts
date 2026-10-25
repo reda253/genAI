@@ -29,7 +29,7 @@ test('reads values from env', () => {
       timeoutMs: 9000,
     },
   });
-  expect(c.zetaris.mockDir.endsWith('/mock/b')).toBe(true);
+  expect(c.zetaris.mockDir.endsWith(join('mock', 'b'))).toBe(true);
 });
 
 test('loadDotEnv does not throw', () => expect(() => loadDotEnv()).not.toThrow());

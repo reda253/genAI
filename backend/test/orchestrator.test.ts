@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { createOrchestrator, NoRunYetError, NotFoundError, RunInProgressError } from '../src/agents/orchestrator.ts';
 import type { Llm } from '../src/agents/types.ts';
 import { mockSql } from './helpers.ts';
+import { ENTITY_SQL } from '../src/zetaris/entitySql.ts';
 
 const nope = () => Promise.reject(new Error('llm not used by stubs'));
 export const fakeLlm: Llm = { chat: nope, generate: nope, listModels: nope };
@@ -55,6 +56,17 @@ test('world model ingest traces the entity count from full view rows', async () 
   expect(ingested).toBeDefined();
   expect(ingested.step).toBe('leak_hunter');
   expect(ingested.data.entities).toBe(79);
+});
+
+test('a failed world model ingest is traced and the run still finishes', async () => {
+  const logsDir = mkdtempSync(join(tmpdir(), 'orch-'));
+  const entityQueries = new Set<string>(Object.values(ENTITY_SQL));
+  const sql = (q: string) => entityQueries.has(q) ? Promise.reject(new Error('view down')) : mockSql(q);
+  const o = createOrchestrator({ llm: fakeLlm, sql, logsDir });
+  const { run_id } = o.startRun();
+  expect((await o.wait(run_id)).status).toBe('done');
+  const lines = readFileSync(join(logsDir, `${run_id}.jsonl`), 'utf8').trim().split('\n').map(l => JSON.parse(l));
+  expect(lines.find(l => l.event === 'world_model_failed')).toMatchObject({ step: 'leak_hunter', data: { error: 'view down' } });
 });
 
 test('second start while running throws RunInProgressError', async () => {

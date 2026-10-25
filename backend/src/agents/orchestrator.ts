@@ -68,8 +68,9 @@ export function createOrchestrator(deps: OrchestratorDeps) {
             const rows = await fetchEntityRows(ctx.sql);
             await ingestZetarisData(engines.worldModel, { ...rows, findings }, status.run_id);
             ctx.trace('world_model_ingested', { entities: countEntities(rows, findings) });
-          } catch {
+          } catch (e) {
             // findings are still valid without the entity graph
+            ctx.trace('world_model_failed', { error: (e as Error).message });
           }
         }
         return findings;

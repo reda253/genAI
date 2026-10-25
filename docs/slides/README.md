@@ -122,8 +122,8 @@ Optional fifth image: the draft modal with “Never sent automatically”.
 ### Slide 8 — P1
 
 Refresh the backend-test count at the freeze tag. The current number is
-**124 passed** from `backend/npm test`. Update both the stat card and the
-terminal block if the number changes.
+**128 passed** from `backend/npm test` (20 files). Update both the stat card and
+the terminal block if the number changes.
 
 ### Slide 9 — P3 / P5
 

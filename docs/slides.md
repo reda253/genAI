@@ -223,7 +223,7 @@ FX rates (public REST)┘              client_profitability
 | Planted leaks found | **6/6** |
 | False alarms | **0** |
 | Data sanity checks | **1,256 passed** |
-| Backend tests | **124 passed** `[P1: refresh at freeze]` |
+| Backend tests | **128 passed** `[P1: refresh at freeze]` |
 | Monthly leaks | **€1,918** |
 | Cash at risk | **€4,800** |
 | Closing cash | **€8,420** |

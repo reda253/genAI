@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createOrchestrator, NoRunYetError, NotFoundError, RunInProgressError } from '../src/agents/orchestrator.ts';
 import type { Llm } from '../src/agents/types.ts';
-import { mockSql } from './helpers.ts';
+import { mockSql, scriptedLlm } from './helpers.ts';
 import { ENTITY_SQL } from '../src/zetaris/entitySql.ts';
 
 const nope = () => Promise.reject(new Error('llm not used by stubs'));
@@ -122,4 +122,47 @@ test('unwritable logs dir fails the run instead of crashing, and frees the slot'
 
 test('getRun unknown id throws NotFoundError', () => {
   expect(() => make().o.getRun('run_nope')).toThrow(NotFoundError);
+});
+
+const readTrace = (logsDir: string, runId: string) =>
+  readFileSync(join(logsDir, `${runId}.jsonl`), 'utf8').trim().split('\n').map(l => JSON.parse(l));
+
+test('every model call is traced with its model, time and outcome, engines included', async () => {
+  const logsDir = mkdtempSync(join(tmpdir(), 'orch-'));
+  const { llm } = scriptedLlm('not json');
+  const o = createOrchestrator({ llm, sql: mockSql, logsDir, model: 'fast-x', deepModel: 'deep-x' });
+  const { run_id } = o.startRun();
+  await o.wait(run_id);
+  const calls = readTrace(logsDir, run_id).filter(l => l.event === 'llm_call');
+  expect(calls.find(l => l.step === 'leak_hunter')?.data).toMatchObject({ model: 'fast-x', ok: true });
+  expect(calls.find(l => l.step === 'cfo')?.data).toMatchObject({ model: 'deep-x', ok: true });
+  expect(calls.some(l => l.step === 'explainer')).toBe(true); // Markovian engine calls llm.generate
+  expect(calls.every(l => typeof l.data.ms === 'number')).toBe(true);
+});
+
+test('a failed model call is traced with ok:false', async () => {
+  const { o, logsDir } = make();
+  const { run_id } = o.startRun();
+  await o.wait(run_id);
+  const calls = readTrace(logsDir, run_id).filter(l => l.event === 'llm_call');
+  expect(calls.length).toBeGreaterThan(0);
+  expect(calls.every(l => l.data.ok === false && l.data.model === 'default')).toBe(true);
+});
+
+test('leak hunter traces checks_done, cfo traces memory_applied', async () => {
+  const { o, logsDir } = make();
+  const { run_id } = o.startRun();
+  await o.wait(run_id);
+  const lines = readTrace(logsDir, run_id);
+  expect(lines.find(l => l.event === 'checks_done')).toMatchObject({ step: 'leak_hunter', data: { ran: 6, failed: 0 } });
+  expect(lines.find(l => l.event === 'memory_applied')).toMatchObject({ step: 'cfo', data: { count: 0 } });
+});
+
+test('trace(runId) returns the run lines; unknown or unsafe ids are not found', async () => {
+  const { o } = make();
+  const { run_id } = o.startRun();
+  await o.wait(run_id);
+  expect(o.trace(run_id)[0]).toMatchObject({ run_id, step: 'leak_hunter', event: 'start' });
+  expect(() => o.trace('run_20990101_000000')).toThrow(NotFoundError);
+  expect(() => o.trace('../package')).toThrow(NotFoundError);
 });

@@ -186,6 +186,7 @@ finding_ids must only contain ids from the findings above.
   // P4 H-MEM: apply user decision memories to adjust move ranking and memory_note
   if (ctx.engines?.hmem) {
     brief.moves = applyMemoriesToMoves(ctx.engines.hmem, brief.moves);
+    ctx.trace('memory_applied', { count: brief.moves.filter(m => m.memory_note).length });
   }
 
   return brief;

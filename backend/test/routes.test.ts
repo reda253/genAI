@@ -130,3 +130,14 @@ test('serves the web build when webDir is given, API untouched', async () => {
   expect((await app.inject({ url: '/api/health' })).json().ok).toBe(true);
   expect((await app.inject({ url: '/api/nope' })).json().error.code).toBe('not_found');
 });
+
+test('GET /api/runs/:id/trace returns trace lines, 404 for unknown run', async () => {
+  const { app } = await withRun();
+  const runId = (await app.inject({ url: '/api/brief' })).json().run_id;
+  const res = await app.inject({ url: `/api/runs/${runId}/trace` });
+  expect(res.statusCode).toBe(200);
+  expect(res.json().some((l: { event: string }) => l.event === 'start')).toBe(true);
+  const missing = await app.inject({ url: '/api/runs/run_20990101_000000/trace' });
+  expect(missing.statusCode).toBe(404);
+  expect(missing.json().error.code).toBe('not_found');
+});

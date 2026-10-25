@@ -1,5 +1,8 @@
 // Runs Leak Hunter → Explainer → Forecaster → CFO in the background and keeps the latest result.
-import { createTracer } from '../traces.ts';
+import { AsyncLocalStorage } from 'node:async_hooks';
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { createTracer, type TraceLine } from '../traces.ts';
 import { leakHunter } from './leakHunter.ts';
 import { explainer } from './explainer.ts';
 import { forecaster } from './forecaster.ts';
@@ -21,7 +24,35 @@ export interface OrchestratorDeps {
   agents?: Partial<Agents>;
   now?: () => Date;
   engines?: Engines;
+  /** Model used when a call names none (Nightshift's METERLESS_MODEL); only for llm_call trace lines. */
+  model?: string;
   deepModel?: string;
+}
+
+type TraceFn = (event: string, data?: unknown) => void;
+// The step a model call belongs to. Engines call llm.generate outside any AgentContext, so the
+// tracer travels with the async call chain instead of being passed in.
+const callTrace = new AsyncLocalStorage<TraceFn>();
+
+/** Wraps an Llm so every call writes `llm_call { model, ms, ok }` to the current step's trace. */
+export function traceLlm(llm: Llm, defaultModel = 'default'): Llm {
+  const timed = async (model: string, call: () => Promise<string>) => {
+    const log = callTrace.getStore();
+    const t = Date.now();
+    try {
+      const out = await call();
+      log?.('llm_call', { model, ms: Date.now() - t, ok: true });
+      return out;
+    } catch (e) {
+      log?.('llm_call', { model, ms: Date.now() - t, ok: false });
+      throw e;
+    }
+  };
+  return {
+    ...llm,
+    chat: (messages, opts) => timed(opts?.model ?? defaultModel, () => llm.chat(messages, opts)),
+    generate: prompt => timed(defaultModel, () => llm.generate(prompt)),
+  };
 }
 
 export class RunInProgressError extends Error {
@@ -37,7 +68,8 @@ const DEFAULT_QUESTION = 'Why did my margin drop in September?';
 // ponytail: in-memory only, runs are lost on restart; persist when the demo needs history.
 export function createOrchestrator(deps: OrchestratorDeps) {
   const agents: Agents = { leakHunter, explainer, forecaster, cfo, ...deps.agents };
-  const engines = deps.engines ?? createEngines(deps.llm);
+  const llm = traceLlm(deps.llm, deps.model);
+  const engines = deps.engines ?? createEngines(llm);
   const now = deps.now ?? (() => new Date());
   const runs = new Map<string, RunStatus>();
   const done = new Map<string, Promise<RunStatus>>();
@@ -46,7 +78,12 @@ export function createOrchestrator(deps: OrchestratorDeps) {
 
   const ctxFor = (runId: string, step: string | null): AgentContext => {
     const tracer = createTracer(runId, deps.logsDir);
-    return { runId, llm: deps.llm, sql: deps.sql, deepModel: deps.deepModel, trace: (event, data) => tracer.log(step, event, data), engines };
+    return { runId, llm, sql: deps.sql, deepModel: deps.deepModel, trace: (event, data) => tracer.log(step, event, data), engines };
+  };
+  /** Runs an agent with its model calls (its own and the engines') traced to its step. */
+  const runAgent = <T>(runId: string, step: string, fn: (ctx: AgentContext) => Promise<T>): Promise<T> => {
+    const ctx = ctxFor(runId, step);
+    return callTrace.run(ctx.trace, () => fn(ctx));
   };
 
   async function execute(status: RunStatus): Promise<RunStatus> {
@@ -54,7 +91,7 @@ export function createOrchestrator(deps: OrchestratorDeps) {
     const step = async <T>(name: RunStep, fn: (ctx: AgentContext) => Promise<T>): Promise<T> => {
       status.step = name;
       tracer.log(name, 'start');
-      const out = await fn(ctxFor(status.run_id, name));
+      const out = await runAgent(status.run_id, name, fn);
       tracer.log(name, 'done');
       return out;
     };
@@ -123,11 +160,18 @@ export function createOrchestrator(deps: OrchestratorDeps) {
     latest,
     async explain(question: string, findingId: string | null): Promise<Explanation> {
       const { findings, brief } = latest();
-      return agents.explainer(ctxFor(brief.run_id, 'explainer'), { question, finding_id: findingId, findings });
+      return runAgent(brief.run_id, 'explainer', ctx => agents.explainer(ctx, { question, finding_id: findingId, findings }));
     },
     async whatIf(scenario: Scenario): Promise<{ baseline: Forecast; scenario: Forecast }> {
       const { forecast, brief } = latest();
-      return { baseline: forecast, scenario: await agents.forecaster(ctxFor(brief.run_id, 'forecaster'), scenario) };
+      return { baseline: forecast, scenario: await runAgent(brief.run_id, 'forecaster', ctx => agents.forecaster(ctx, scenario)) };
+    },
+    /** The run's trace lines (logs/<run_id>.jsonl), in file order. */
+    trace(runId: string): TraceLine[] {
+      const file = join(deps.logsDir, `${runId}.jsonl`);
+      // the id becomes a file name: accept only the run_id shape
+      if (!/^run_\d{8}_\d{6}$/.test(runId) || !existsSync(file)) throw new NotFoundError(`no trace for run ${runId}`);
+      return readFileSync(file, 'utf8').split('\n').filter(Boolean).map(l => JSON.parse(l));
     },
     decide(moveId: string, decision: 'approve' | 'reject', note: string | null): Move {
       const move = latest().brief.moves.find(m => m.id === moveId);

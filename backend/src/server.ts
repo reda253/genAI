@@ -80,6 +80,7 @@ export function buildServer({ orchestrator: o, checks, webDir }: ServerDeps): Fa
     async req => o.explain(req.body.question, req.body.finding_id ?? null));
 
   app.get('/api/forecast', async () => o.latest().forecast);
+  app.get('/api/changes', async () => o.changes());
   app.post<{ Body: Scenario }>('/api/forecast/what-if', { schema: { body: whatIfBody } }, async req => o.whatIf(req.body));
 
   app.post<{ Params: { id: string }; Body: { decision: 'approve' | 'reject'; note?: string | null } }>(

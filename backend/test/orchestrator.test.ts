@@ -166,3 +166,35 @@ test('trace(runId) returns the run lines; unknown or unsafe ids are not found', 
   expect(() => o.trace('run_20990101_000000')).toThrow(NotFoundError);
   expect(() => o.trace('../package')).toThrow(NotFoundError);
 });
+
+test('changes(): first run has no previous; second run diffs against the saved first run', async () => {
+  const logsDir = mkdtempSync(join(tmpdir(), 'orch-'));
+  let t = Date.parse('2026-10-26T09:00:00Z');
+  let dropPriceRise = false;
+  const sql = async (q: string) => {
+    const r = await mockSql(q);
+    return dropPriceRise && q.includes('price_change_pct > 15') ? { ...r, rows: [] } : r;
+  };
+  const make2 = () => createOrchestrator({ llm: fakeLlm, sql, logsDir, now: () => new Date(t += 60_000) });
+
+  const o1 = make2();
+  const first = o1.startRun().run_id;
+  await o1.wait(first);
+  expect(o1.changes()).toMatchObject({ previous_run_id: null, resolved: [], changed: [] });
+  expect(o1.changes().new).toHaveLength(6);
+
+  dropPriceRise = true;
+  const o2 = make2(); // a restarted backend still finds the previous run on disk
+  const second = o2.startRun().run_id;
+  await o2.wait(second);
+  const c = o2.changes();
+  expect(c.previous_run_id).toBe(first);
+  expect(c.new).toEqual([]);
+  expect(c.resolved.map(x => x.type)).toEqual(['price_rise']);
+  expect(o2.latest().brief.what_changed[0]).toMatch(/^Resolved: /);
+});
+
+test('changes() before any run is empty, not an error', () => {
+  const { o } = make();
+  expect(o.changes()).toEqual({ previous_run_id: null, new: [], resolved: [], changed: [] });
+});

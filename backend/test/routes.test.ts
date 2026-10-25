@@ -141,3 +141,10 @@ test('GET /api/runs/:id/trace returns trace lines, 404 for unknown run', async (
   expect(missing.statusCode).toBe(404);
   expect(missing.json().error.code).toBe('not_found');
 });
+
+test('GET /api/changes', async () => {
+  const { app } = await withRun();
+  const res = await app.inject({ url: '/api/changes' });
+  expect(res.statusCode).toBe(200);
+  expect(res.json()).toMatchObject({ previous_run_id: null, resolved: [], changed: [] });
+});

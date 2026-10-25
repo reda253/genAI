@@ -1,6 +1,6 @@
 // Runs Leak Hunter → Explainer → Forecaster → CFO in the background and keeps the latest result.
 import { AsyncLocalStorage } from 'node:async_hooks';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { createTracer, type TraceLine } from '../traces.ts';
 import { leakHunter } from './leakHunter.ts';
@@ -11,6 +11,9 @@ import { createEngines, type Engines } from '../engines/index.ts';
 import { recordDecision } from '../engines/hmemAdapter.ts';
 import { ingestZetarisData } from '../engines/worldModelAdapter.ts';
 import { countEntities, fetchEntityRows } from '../zetaris/entitySql.ts';
+import { describeChanges, diffRuns, type RunDiff } from './changes.ts';
+
+export interface RunChanges extends RunDiff { previous_run_id: string | null }
 import type {
   AgentContext, Brief, Explanation, Finding, Forecast, Llm, Move, RunStatus, RunStep, Scenario,
 } from './types.ts';
@@ -65,7 +68,8 @@ export class NoRunYetError extends Error {
 
 const DEFAULT_QUESTION = 'Why did my margin drop in September?';
 
-// ponytail: in-memory only, runs are lost on restart; persist when the demo needs history.
+// ponytail: run status and the latest result live in memory and are lost on restart; finished
+// results are also saved to logs/runs/ so /api/changes survives a restart.
 export function createOrchestrator(deps: OrchestratorDeps) {
   const agents: Agents = { leakHunter, explainer, forecaster, cfo, ...deps.agents };
   const llm = traceLlm(deps.llm, deps.model);
@@ -75,6 +79,15 @@ export function createOrchestrator(deps: OrchestratorDeps) {
   const done = new Map<string, Promise<RunStatus>>();
   let current: RunResult | null = null;
   let running: string | null = null;
+  const runsDir = join(deps.logsDir, 'runs');
+  let changes: RunChanges = { previous_run_id: null, new: [], resolved: [], changed: [] };
+
+  /** The newest saved run before runId (ids sort by time). */
+  const previousRun = (runId: string): { runId: string; result: RunResult } | null => {
+    if (!existsSync(runsDir)) return null;
+    const file = readdirSync(runsDir).filter(f => /^run_\d{8}_\d{6}\.json$/.test(f) && f < `${runId}.json`).sort().pop();
+    return file ? { runId: file.slice(0, -5), result: JSON.parse(readFileSync(join(runsDir, file), 'utf8')) } : null;
+  };
 
   const ctxFor = (runId: string, step: string | null): AgentContext => {
     const tracer = createTracer(runId, deps.logsDir);
@@ -115,7 +128,17 @@ export function createOrchestrator(deps: OrchestratorDeps) {
       const explanation = await step('explainer', ctx => agents.explainer(ctx, { question: DEFAULT_QUESTION, finding_id: null, findings }));
       const forecast = await step('forecaster', ctx => agents.forecaster(ctx, { type: 'baseline' }));
       const brief = await step('cfo', ctx => agents.cfo(ctx, { findings, forecast, explanation }));
+      // I7: diff against the previous saved run; its lines replace the model's what_changed.
+      const prev = previousRun(status.run_id);
+      const diff = diffRuns(prev?.result.findings ?? [], findings);
+      changes = { previous_run_id: prev?.runId ?? null, ...diff };
+      if (prev) {
+        const lines = describeChanges(diff, findings);
+        brief.what_changed = lines.length ? lines : ['No change since the last run'];
+      }
       current = { brief, findings, forecast, explanation };
+      mkdirSync(runsDir, { recursive: true });
+      writeFileSync(join(runsDir, `${status.run_id}.json`), JSON.stringify(current));
       Object.assign(status, { status: 'done', step: null });
     } catch (e) {
       Object.assign(status, { status: 'failed', error: (e as Error).message });
@@ -166,6 +189,8 @@ export function createOrchestrator(deps: OrchestratorDeps) {
       const { forecast, brief } = latest();
       return { baseline: forecast, scenario: await runAgent(brief.run_id, 'forecaster', ctx => agents.forecaster(ctx, scenario)) };
     },
+    /** What changed between the latest run and the one before it (contract §5). */
+    changes: (): RunChanges => changes,
     /** The run's trace lines (logs/<run_id>.jsonl), in file order. */
     trace(runId: string): TraceLine[] {
       const file = join(deps.logsDir, `${runId}.jsonl`);

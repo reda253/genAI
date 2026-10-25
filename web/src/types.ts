@@ -114,3 +114,54 @@ export interface HealthResponse {
   nightshift: boolean;
   nightshift_status: 'online' | 'unauthorized' | 'offline';
 }
+
+// Contract v1.1 (docs/contracts.md section 5)
+
+export type TraceEvent =
+  | 'start' | 'done' | 'llm_failed' | 'llm_rejected' | 'markovian_done'
+  | 'llm_call' | 'checks_done' | 'memory_applied' | 'critique' | 'escalated' | 'world_model_ingested';
+
+export interface TraceLine {
+  ts: string;
+  run_id: string;
+  step: string | null;
+  event: TraceEvent | (string & {});
+  data?: unknown;
+}
+
+export interface LlmCallData { model: string; ms: number; ok: boolean }
+export interface CritiqueData { agent: 'explainer' | 'cfo'; problems: string[]; revised: boolean }
+export interface EscalatedData { finding_ids: string[]; reason: 'low_confidence' }
+
+export interface ActionDraft {
+  move_id: string;
+  kind: 'email' | 'steps' | 'invoice_lines';
+  subject: string | null;
+  body: string;
+  ungrounded: number[];
+}
+
+export interface Entity {
+  id: string;
+  kind: 'client' | 'subscription';
+  name: string;
+  summary: string;
+  facts: Record<string, string | number>;
+  findings: Finding[];
+  invoices: Record<string, unknown>[];
+}
+
+export interface Memory {
+  id: string;
+  text: string;
+  decision: 'approve' | 'reject';
+  action_type: ActionType;
+  created_at: string;
+}
+
+export interface RunChanges {
+  previous_run_id: string | null;
+  new: Finding[];
+  resolved: Finding[];
+  changed: { finding_id: string; field: string; before: number; after: number }[];
+}

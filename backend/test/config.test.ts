@@ -17,7 +17,7 @@ test('reads values from env', () => {
     PORT: '5000', METERLESS_BASE_URL: 'http://x/v1', METERLESS_RUNTIME_TOKEN: 't',
     METERLESS_MODEL: 'm', METERLESS_DEEP_MODEL: 'd', ZETARIS_MOCK: '1',
     ZETARIS_VIEW_SCHEMA: 'custom_schema', ZETARIS_QUERY_LIMIT: '50',
-    ZETARIS_TIMEOUT_MS: '9000',
+    ZETARIS_TIMEOUT_MS: '9000', ZETARIS_MOCK_DIR: 'mock/b',
   });
   expect(c).toMatchObject({
     port: 5000,
@@ -29,6 +29,7 @@ test('reads values from env', () => {
       timeoutMs: 9000,
     },
   });
+  expect(c.zetaris.mockDir.endsWith('/mock/b')).toBe(true);
 });
 
 test('loadDotEnv does not throw', () => expect(() => loadDotEnv()).not.toThrow());

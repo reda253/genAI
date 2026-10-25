@@ -8,7 +8,7 @@
 import type { Finding, QueryResult } from '../agents/types.ts';
 
 export const ENTITY_SQL = {
-  clientProfitability: `SELECT client_id, client_name, month, hours_logged, hours_billed, unbilled_hours, unbilled_pct, hourly_rate, market_rate, effective_rate, revenue_invoiced, revenue_received FROM client_profitability`,
+  clientProfitability: `SELECT client_id, client_name, \`month\`, hours_logged, hours_billed, unbilled_hours, unbilled_pct, hourly_rate, market_rate, effective_rate, revenue_invoiced, revenue_received FROM client_profitability`,
   subscriptionUsage: `SELECT subscription_id, vendor, plan, monthly_cost, first_charge_amount, last_charge_amount, price_change_pct, last_login_date, days_since_login, max_charges_in_a_month, total_charged FROM subscription_usage`,
   arAging: `SELECT invoice_id, client_id, client_name, amount, issue_date, due_date, paid_date, days_late, bucket, status FROM ar_aging`,
 } as const;

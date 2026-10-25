@@ -7,7 +7,8 @@ services:
   seed: # one-shot: deterministic data into Postgres
     image: python:3.12-slim
     working_dir: /repo
-    volumes: [".:/repo:ro"]
+    # Only data/ is needed. :z lets SELinux hosts (e.g. Fedora) read the bind mount.
+    volumes: ["./data:/repo/data:ro,z"]
     environment:
       DATABASE_URL: "postgresql://${POSTGRES_USER:-ledger}:${POSTGRES_PASSWORD:-ledger_dev}@postgres:5432/${POSTGRES_DB:-ledger_lens}"
     # The scripts write next to themselves, so run a copy and keep the repo read-only.

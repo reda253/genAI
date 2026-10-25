@@ -1,4 +1,4 @@
-import { mkdtempSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { buildServer } from '../src/server.ts';
@@ -116,4 +116,17 @@ test('POST /api/moves/:id/decision', async () => {
   expect(ok.json().status).toBe('approved');
   expect((await app.inject(post('/api/moves/m001/decision', { decision: 'maybe' }))).statusCode).toBe(400);
   expect((await app.inject(post('/api/moves/m999/decision', { decision: 'approve' }))).statusCode).toBe(404);
+});
+
+test('serves the web build when webDir is given, API untouched', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'web-'));
+  writeFileSync(join(dir, 'index.html'), '<div id="root"></div>');
+  mkdirSync(join(dir, 'assets'));
+  writeFileSync(join(dir, 'assets', 'app.js'), 'console.log(1)');
+  const orchestrator = createOrchestrator({ llm, sql: mockSql, logsDir: mkdtempSync(join(tmpdir(), 'rt-')) });
+  const app = buildServer({ orchestrator, checks: { zetaris: async () => false, nightshift: async () => 'online' }, webDir: dir });
+  expect((await app.inject({ url: '/' })).body).toContain('id="root"');
+  expect((await app.inject({ url: '/assets/app.js' })).headers['content-type']).toMatch(/javascript/);
+  expect((await app.inject({ url: '/api/health' })).json().ok).toBe(true);
+  expect((await app.inject({ url: '/api/nope' })).json().error.code).toBe('not_found');
 });

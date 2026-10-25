@@ -15,7 +15,8 @@ import rawFindings from './mock/findings.json';
 import rawForecast from './mock/forecast.json';
 import rawWhatIf from './mock/what_if.json';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+// Empty string = same origin (the Docker image serves web and API on one port).
+const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:4000';
 // Live API by default; mock data only when explicitly asked for (VITE_USE_MOCKS=true or the navbar toggle).
 const DEFAULT_USE_MOCKS = import.meta.env.VITE_USE_MOCKS === 'true';
 

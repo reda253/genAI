@@ -139,4 +139,33 @@ describe('explainer agent', () => {
     expect(result.causes).toHaveLength(1);
     expect(result.causes[0].finding_id).toBe('f002');
   });
+
+  it('G1: critiques ungrounded amounts and accepts revised grounded answer', async () => {
+    const replies = [
+      JSON.stringify({
+        summary: 'First try.',
+        causes: [{ rank: 1, cause: 'Unbilled Atlas', amount_eur: 99999, finding_id: 'f002' }],
+        uncertain: false,
+      }),
+      JSON.stringify({
+        summary: 'Revised try.',
+        causes: [{ rank: 1, cause: 'Unbilled Atlas', amount_eur: 1320, finding_id: 'f002' }],
+        uncertain: false,
+      }),
+    ];
+    const { llm } = scriptedLlm(() => replies.shift()!);
+    const events: { event: string; data?: any }[] = [];
+    const result = await explainer(
+      { runId: 'r', llm, deepModel: 'deep-x', sql: () => Promise.reject(new Error('no')), trace: (event, data) => events.push({ event, data }) },
+      { question: 'Why?', finding_id: null, findings }
+    );
+
+    expect(result.summary).toBe('Revised try.');
+    expect(result.uncertain).toBe(false);
+    expect(result.causes[0].amount_eur).toBe(1320);
+    const critique = events.find(e => e.event === 'critique');
+    expect(critique).toBeDefined();
+    expect(critique?.data).toMatchObject({ agent: 'explainer', revised: true });
+    expect(critique?.data.problems[0]).toMatch(/99999/);
+  });
 });

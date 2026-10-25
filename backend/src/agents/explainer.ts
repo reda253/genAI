@@ -1,5 +1,5 @@
-// Explainer agent (P5 & P4): causal analysis with zero hallucination, evidence linking, and Markovian bounded reasoning.
-import type { AgentContext, Cause, Explanation, Finding } from './types.ts';
+// Explainer agent (P5 & P4): causal analysis with zero hallucination, evidence linking, Markovian bounded reasoning, and G1 critic-revision loop.
+import type { AgentContext, Cause, ChatMessage, Explanation, Finding } from './types.ts';
 import { stripReasoning } from '../llm/nightshift.ts';
 import { runExplainerInvestigation } from '../engines/markovianAdapter.ts';
 import { loadPrompt } from './prompts.ts';
@@ -33,7 +33,7 @@ function groundedAmounts(f: Finding): Set<number> {
 }
 
 /** Keep only causes that cite a real finding; take evidence from that finding, never from the model. */
-function groundCauses(raw: unknown, findings: Finding[]): { causes: Cause[]; ungrounded: number[] } {
+export function groundCauses(raw: unknown, findings: Finding[]): { causes: Cause[]; ungrounded: number[] } {
   const byId = new Map(findings.map(f => [f.id, f]));
   const ungrounded: number[] = [];
   const causes = (Array.isArray(raw) ? raw : [])
@@ -55,17 +55,47 @@ export async function explainer(
     ? input.findings.filter(f => f.id === input.finding_id)
     : input.findings;
 
-  /** Parse a model answer and keep it only if it has a summary and at least one cause citing a known finding. */
-  const grounded = (raw: string): Explanation | null => {
+  /** Parse a model answer and return its structure and ungrounded amounts. */
+  const parseAnswer = (raw: string): { explanation: Explanation | null; ungrounded: number[] } => {
     let parsed: Partial<Explanation>;
-    try { parsed = extractJson(raw) as Partial<Explanation>; } catch { return null; } // not JSON = rejected answer
+    try { parsed = extractJson(raw) as Partial<Explanation>; } catch { return { explanation: null, ungrounded: [] }; }
     const { causes, ungrounded } = groundCauses(parsed?.causes, relevantFindings);
-    if (typeof parsed?.summary !== 'string' || causes.length === 0) return null;
+    if (typeof parsed?.summary !== 'string' || causes.length === 0) return { explanation: null, ungrounded };
     const uncertain = Boolean(parsed.uncertain) || ungrounded.length > 0;
     const note = ungrounded.length > 0
       ? `Amounts not found in the evidence rows: ${ungrounded.join(', ')} EUR.`
       : parsed.uncertainty_note ?? null;
-    return { question: input.question, summary: parsed.summary, causes, uncertain, uncertainty_note: uncertain ? note : null };
+    return {
+      explanation: { question: input.question, summary: parsed.summary, causes, uncertain, uncertainty_note: uncertain ? note : null },
+      ungrounded,
+    };
+  };
+
+  /** G1: One critique-revise round if amounts were ungrounded. */
+  const handleCritique = async (initialRaw: string, ungrounded: number[], history: ChatMessage[]): Promise<Explanation | null> => {
+    if (ungrounded.length === 0) return null;
+    const problems = ungrounded.map(n => `ungrounded amount: ${n} EUR`);
+    const critiquePrompt = `These amounts are not in the evidence rows: ${ungrounded.join(', ')} EUR. Revise using only the evidence. Return strict JSON matching the Explanation schema.`;
+    try {
+      const revisedRaw = await ctx.llm.chat([
+        ...history,
+        { role: 'assistant', content: initialRaw },
+        { role: 'user', content: critiquePrompt },
+      ], { model: ctx.deepModel });
+
+      const revised = parseAnswer(revisedRaw);
+      if (revised.explanation && revised.ungrounded.length === 0) {
+        ctx.trace('critique', { agent: 'explainer', problems, revised: true });
+        return { ...revised.explanation, uncertain: false, uncertainty_note: null };
+      }
+      ctx.trace('critique', { agent: 'explainer', problems, revised: false });
+      return revised.explanation
+        ? { ...revised.explanation, uncertain: true, uncertainty_note: `Amounts not found in the evidence rows: ${revised.ungrounded.length ? revised.ungrounded.join(', ') : ungrounded.join(', ')} EUR.` }
+        : null;
+    } catch {
+      ctx.trace('critique', { agent: 'explainer', problems, revised: false });
+      return null;
+    }
   };
 
   // 1. Markovian engine: bounded multi-chunk investigation on the deep lane; its final JSON answer is grounded
@@ -78,8 +108,17 @@ export async function explainer(
         generator: prompt => ctx.llm.chat([{ role: 'user', content: prompt }], { model: ctx.deepModel }),
       });
       ctx.trace('markovian_done', { chunks: inv.chunkCount, tokens: inv.tokensProcessed });
-      const answer = grounded(inv.output);
-      if (answer) return answer;
+      const parsed = parseAnswer(inv.output);
+      if (parsed.explanation) {
+        if (parsed.ungrounded.length > 0) {
+          const revised = await handleCritique(inv.output, parsed.ungrounded, [
+            { role: 'system', content: loadPrompt('explainer') },
+            { role: 'user', content: `Question: ${JSON.stringify(input.question)}\nFindings: ${JSON.stringify(relevantFindings, null, 2)}` },
+          ]);
+          if (revised) return revised;
+        }
+        return parsed.explanation;
+      }
       ctx.trace('llm_rejected', { reason: 'Markovian answer had no cause citing a known finding' });
     } catch (e) {
       ctx.trace('llm_failed', { engine: 'markovian', error: (e as Error).message });
@@ -104,13 +143,20 @@ and amount_eur must be a number that appears in that finding (its impact or its 
   "uncertainty_note": null
 }`;
 
-    const raw = await ctx.llm.chat([
+    const history: ChatMessage[] = [
       { role: 'system', content: loadPrompt('explainer') },
       { role: 'user', content: prompt },
-    ], { model: ctx.deepModel });
+    ];
+    const raw = await ctx.llm.chat(history, { model: ctx.deepModel });
 
-    const answer = grounded(raw);
-    if (answer) return answer;
+    const parsed = parseAnswer(raw);
+    if (parsed.explanation) {
+      if (parsed.ungrounded.length > 0) {
+        const revised = await handleCritique(raw, parsed.ungrounded, history);
+        if (revised) return revised;
+      }
+      return parsed.explanation;
+    }
     ctx.trace('llm_rejected', { reason: 'no summary or no cause citing a known finding' });
   } catch (e) {
     ctx.trace('llm_failed', { error: (e as Error).message });

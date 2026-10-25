@@ -47,12 +47,16 @@ export class MemoryStoreService {
     persistDir?: string
   ) {
     if (persistDir) {
-      fs.mkdirSync(persistDir, { recursive: true });
-      this.stateFile = path.join(persistDir, "state.json");
-      if (fs.existsSync(this.stateFile)) {
-        const saved = JSON.parse(fs.readFileSync(this.stateFile, "utf-8")) as { seq: number; records: MemoryRecord[] };
-        this.seq = saved.seq;
-        for (const r of saved.records) this.records.set(r.id, r);
+      try {
+        fs.mkdirSync(persistDir, { recursive: true });
+        this.stateFile = path.join(persistDir, "state.json");
+        if (fs.existsSync(this.stateFile)) {
+          const saved = JSON.parse(fs.readFileSync(this.stateFile, "utf-8")) as { seq: number; records: MemoryRecord[] };
+          this.seq = saved.seq;
+          for (const r of saved.records) this.records.set(r.id, r);
+        }
+      } catch {
+        this.stateFile = undefined;
       }
     }
   }

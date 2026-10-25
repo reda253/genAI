@@ -2,7 +2,6 @@ import { existsSync } from 'node:fs';
 import { loadConfig, loadDotEnv } from './config.ts';
 import { autoDetect, createNightshift } from './llm/nightshift.ts';
 import { createOrchestrator } from './agents/orchestrator.ts';
-import { createEngines } from './engines/index.ts';
 import { buildServer } from './server.ts';
 import { createZetarisClient } from './zetaris/client.ts';
 
@@ -20,13 +19,12 @@ if ((await llm.status()) === 'offline') {
   }
 }
 
-const engines = createEngines(llm);
-
+// The orchestrator creates the engines with its traced llm, so engine model calls land in the trace too.
 const orchestrator = createOrchestrator({
   llm,
-  engines,
   logsDir: config.logsDir,
   sql: zetaris.querySql,
+  model: config.meterless.model,
   deepModel: config.meterless.deepModel,
 });
 

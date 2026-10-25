@@ -65,6 +65,7 @@ export function buildServer({ orchestrator: o, checks, webDir }: ServerDeps): Fa
 
   app.post('/api/runs', async (_req, reply) => reply.status(202).send(o.startRun()));
   app.get<{ Params: { id: string } }>('/api/runs/:id', async req => o.getRun(req.params.id));
+  app.get<{ Params: { id: string } }>('/api/runs/:id/trace', async req => o.trace(req.params.id));
 
   app.get('/api/brief', async () => o.latest().brief);
   app.get('/api/findings', async () => o.latest().findings);

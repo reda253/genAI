@@ -19,6 +19,7 @@ export async function leakHunter(ctx: AgentContext): Promise<Finding[]> {
   results.forEach((r, i) => {
     if (r.status === 'rejected') ctx.trace('check_failed', { check: checks[i][0], error: String(r.reason?.message ?? r.reason) });
   });
+  ctx.trace('checks_done', { ran: checks.length, failed: results.filter(r => r.status === 'rejected').length });
   if (results.every(r => r.status === 'rejected')) {
     const first = results[0] as PromiseRejectedResult;
     throw new Error(`Zetaris unavailable, no leak check could run: ${first.reason?.message ?? first.reason}`);

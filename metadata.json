@@ -66,10 +66,11 @@
       "file": "backend/src/engines/world-model/",
       "test": "backend/test/engines/world-model/smoke.test.ts",
       "adapter": "backend/src/engines/worldModelAdapter.ts",
-      "used_by": "orchestrator: ingests full Zetaris view rows + findings after Leak Hunter (backend/src/zetaris/entitySql.ts)",
+      "used_by": "orchestrator: ingests full Zetaris view rows + findings after Leak Hunter (backend/src/zetaris/entitySql.ts); powers GET /api/entities/:id (Client & Subscription 360)",
       "integration_tests": [
         "backend/test/engines/adapters.test.ts",
-        "backend/test/engines/memoryMoment.test.ts"
+        "backend/test/engines/memoryMoment.test.ts",
+        "backend/test/engines/entity360.test.ts"
       ]
     },
     {
@@ -79,10 +80,11 @@
       "file": "backend/src/engines/hmem/",
       "test": "backend/test/engines/hmem/smoke.test.ts",
       "adapter": "backend/src/engines/hmemAdapter.ts",
-      "used_by": "CFO: applyMemoriesToMoves changes ranking and adds memory_note; orchestrator.decide records each approve/reject",
+      "used_by": "CFO: applyMemoriesToMoves changes ranking and adds memory_note; orchestrator.decide records each approve/reject; disk persistence across restarts; powers GET & DELETE /api/memories",
       "integration_tests": [
         "backend/test/engines/adapters.test.ts",
-        "backend/test/engines/memoryMoment.test.ts"
+        "backend/test/engines/memoryMoment.test.ts",
+        "backend/test/engines/memoryPersistence.test.ts"
       ]
     },
     {

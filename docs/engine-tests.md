@@ -83,24 +83,44 @@ Evidence of conformance tests passing for all three Meterless reference engines 
 
 ---
 
-## 4. Meterless Domain Adapters & Live Memory Moment — Sat Oct 24, 2026
+## 4. Meterless Domain Adapters & Live Memory Moment — Sun Oct 25, 2026
 
 ```
 > vitest run test/engines/
 
  RUN  v2.1.9 C:/Users/ctaha/Desktop/genAI/backend
 
- ✓ test/engines/world-model/smoke.test.ts (10 tests) 44ms
- ✓ test/engines/markovian/smoke.test.ts (10 tests) 21ms
- ✓ test/engines/hmem/smoke.test.ts (10 tests) 27ms
- ✓ test/engines/adapters.test.ts (3 tests) 28ms
-   ✓ World Model: ingests Zetaris views and retrieves rich entity context
-   ✓ H-MEM: stores decisions and adapts move ranking based on past user memory
-   ✓ Markovian: runs chunked hypothesis investigation with carryover
- ✓ test/engines/memoryMoment.test.ts (1 test) 373ms
-   ✓ Demo Memory Moment (H-MEM + World Model live integration) > rejecting a move persists in H-MEM and modifies subsequent CFO brief rankings and memory_notes 371ms
+ ✓ test/engines/world-model/smoke.test.ts (10 tests) 60ms
+ ✓ test/engines/entity360.test.ts (4 tests) 52ms
+ ✓ test/engines/markovian/smoke.test.ts (10 tests) 24ms
+ ✓ test/engines/hmem/smoke.test.ts (10 tests) 28ms
+ ✓ test/engines/adapters.test.ts (6 tests) 46ms
+ ✓ test/engines/memoryMoment.test.ts (1 test) 497ms
+   ✓ Demo Memory Moment (H-MEM + World Model live integration) > rejecting a move persists in H-MEM and modifies subsequent CFO brief rankings and memory_notes 496ms
+ ✓ test/engines/memoryPersistence.test.ts (3 tests) 658ms
+   ✓ H-MEM Memory Persistence & Endpoints (Task I4) > GET /api/memories works without any run and returns [] initially 385ms
+   ✓ H-MEM Memory Persistence & Endpoints (Task I4) > stores decisions, lists them newest first, persists to disk, and allows deleting them
+   ✓ H-MEM Memory Persistence & Endpoints (Task I4) > deleting a memory restores original ranking logic without that memory's penalty
 
- Test Files  5 passed (5)
-      Tests  34 passed (34)
-   Duration  1.65s
+ Test Files  7 passed (7)
+      Tests  44 passed (44)
+   Duration  2.42s
 ```
+
+---
+
+## 5. H-MEM Memory Persistence & Endpoints (Task I4)
+
+- Configurable persistence directory via `createEngines(llm, { persistDir: 'logs/hmem' })`.
+- Safely recovers across application / container restarts.
+- Endpoints: `GET /api/memories` (returns list newest first) and `DELETE /api/memories/:id` (204 on success, 404 if not found).
+- Removing a memory restores normal move ranking without the penalty.
+
+---
+
+## 6. World Model Client & Vendor 360 (Task I3)
+
+- Bitemporal graph & fact store indexed with full Zetaris view rows (`client_profitability`, `subscription_usage`, `ar_aging`, `findings`).
+- Endpoint: `GET /api/entities/:id` (e.g. `c01`, `sub02`).
+- Returns contract-compliant Entity 360 profile: `id`, `kind` (`client` | `subscription`), `name`, `summary`, `facts`, `findings`, `invoices`.
+

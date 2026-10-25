@@ -1,6 +1,6 @@
 # Contracts
 
-**Status: DRAFT v0.1. Review together Fri Oct 23.** Once agreed, change a contract only after telling everyone in the group chat, and bump the version here.
+**Status: v1.1, locked Mon Oct 26 09:30.** v1.0 = sections 0–4 as agreed Fri Oct 23; v1.1 adds section 5 (trace events and endpoints for [final-plan.md](final-plan.md)). Change a contract only after telling everyone in the group chat, and bump the version here.
 
 Everyone builds mocks in exactly these shapes. If your real code can't produce a field, raise it in the chat. Don't rename it quietly.
 
@@ -269,3 +269,37 @@ Before the first run finishes, `GET /api/brief`, `/api/findings` and `/api/forec
 Name mocks after what they mock, so switching to real data is a one-line change:
 - `backend/src/zetaris/mock/<view_name>.json`: array of view rows (P2)
 - `web/src/mock/brief.json`, `findings.json`, `explanation.json`, `forecast.json`, `what_if.json`: API responses (P6)
+
+## 5. v1.1 additions (P1)
+
+TypeScript shapes for the web live in `web/src/types.ts` (`TraceLine`, `ActionDraft`, `Entity`, `Memory`, `RunChanges`).
+
+### Trace events
+
+Every run writes `logs/<run_id>.jsonl`, one `TraceLine` per line: `{ "ts", "run_id", "step", "event", "data" }`. Existing events: `start`, `done`, `llm_failed`, `llm_rejected`, `markovian_done`. New in v1.1:
+
+| `event` | `data` | Written by | Plan task |
+| --- | --- | --- | --- |
+| `llm_call` | `{ "model": "nvidia/...", "ms": 7900, "ok": true }` | every model call (wrapped in `ctxFor`) | I1, M3 |
+| `checks_done` | `{ "ran": 6, "failed": 0 }` | Leak Hunter | I1 |
+| `memory_applied` | `{ "count": 1 }` | CFO | I1 |
+| `critique` | `{ "agent": "explainer" \| "cfo", "problems": ["amount 999.00 not in evidence"], "revised": true }` | Explainer, CFO | G1 |
+| `escalated` | `{ "finding_ids": ["f005"], "reason": "low_confidence" }` | orchestrator | G2 |
+| `world_model_ingested` | `{ "entities": 24 }` | orchestrator | I3 |
+
+`revised: true` = the second answer passed the check; `false` = it failed again and the agent used its fallback.
+
+### Endpoints
+
+| Method | Path | Body | Returns |
+| --- | --- | --- | --- |
+| GET | `/api/runs/:run_id/trace` | | `TraceLine[]` in file order; `404 not_found` if the run has no trace |
+| POST | `/api/moves/:id/draft` | | `{ "move_id", "kind": "email" \| "steps" \| "invoice_lines", "subject": "..." \| null, "body": "...", "ungrounded": [] }`; `404 not_found` for an unknown move. Shown only, never sent |
+| GET | `/api/entities/:id` | | `{ "id": "c01", "kind": "client" \| "subscription", "name", "summary", "facts": { "rate_eur": 60 }, "findings": Finding[], "invoices": [ar_aging rows] }`; `404 not_found` for an unknown id |
+| GET | `/api/memories` | | `[{ "id", "text", "decision": "approve" \| "reject", "action_type", "created_at" }]`, newest first |
+| DELETE | `/api/memories/:id` | | `204`; the memory stops affecting rankings. `404 not_found` for an unknown id |
+| GET | `/api/changes` | | `{ "previous_run_id": "..." \| null, "new": Finding[], "resolved": Finding[], "changed": [{ "finding_id", "field", "before", "after" }] }`; findings match on `(type, client_id, subscription_id)` |
+
+- `ungrounded`: numbers in the draft body not found in the move's evidence. The drafter retries once, then falls back to a template, so the API returns `[]` unless the template itself fails.
+- `/api/changes` with only one finished run: `previous_run_id: null` and every finding in `new`.
+- Like section 4, `/api/changes` and `/api/memories` never return `no_run_yet`; `/api/moves/:id/draft` returns `no_run_yet` before the first run.

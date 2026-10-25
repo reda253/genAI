@@ -36,7 +36,7 @@ Three rules shape the design:
 | Agents | Orchestrator plus 4 agents; fixed SQL checks find the leaks and the model ranks, explains and recommends | `backend/src/agents/` |
 | Engines | World Model, H-MEM and Markovian, each given one injected model function `llm.generate()` | `backend/src/engines/` |
 | Power | Nightshift provider: bearer token, `meterless-app`, `meterless-scope`, `/v1/models` status, Auto Detect | `backend/src/llm/nightshift.ts` |
-| API | Fastify on port 4000, 10 routes | `backend/src/server.ts`, contracts §4 |
+| API | Fastify on port 4000, 10 routes; in the Docker image it also serves the built web app on the same port | `backend/src/server.ts`, contracts §4 |
 | UI | Morning brief, leaks, evidence drawer, forecast with what-ifs | `web/` |
 
 ## One run, step by step
@@ -67,8 +67,8 @@ All shapes (schema, views, agent JSON, API) are defined in [contracts.md](contra
 | Port | Service |
 | --- | --- |
 | 3000 | Zetaris web UI |
-| 4000 | Ledger Lens API |
-| 5173 | Ledger Lens web (Vite) |
+| 4000 | Ledger Lens API (Docker: API + web) |
+| 5173 | Ledger Lens web (Vite, native dev only) |
 | 5433 | Postgres (synthetic data) |
 | 8088 | Meterless Nightshift runtime |
 | 8888 | Zetaris REST API |

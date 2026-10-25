@@ -119,7 +119,7 @@ export interface HealthResponse {
 
 export type TraceEvent =
   | 'start' | 'done' | 'llm_failed' | 'llm_rejected' | 'markovian_done'
-  | 'llm_call' | 'checks_done' | 'memory_applied' | 'critique' | 'escalated' | 'world_model_ingested';
+  | 'llm_call' | 'checks_done' | 'memory_applied' | 'critique' | 'escalated' | 'world_model_ingested' | 'world_model_failed';
 
 export interface TraceLine {
   ts: string;

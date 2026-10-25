@@ -286,6 +286,7 @@ Every run writes `logs/<run_id>.jsonl`, one `TraceLine` per line: `{ "ts", "run_
 | `critique` | `{ "agent": "explainer" \| "cfo", "problems": ["amount 999.00 not in evidence"], "revised": true }` | Explainer, CFO | G1 |
 | `escalated` | `{ "finding_ids": ["f005"], "reason": "low_confidence" }` | orchestrator | G2 |
 | `world_model_ingested` | `{ "entities": 24 }` | orchestrator | I3 |
+| `world_model_failed` | `{ "error": "..." }` | orchestrator (run continues without the entity graph) | I3 |
 
 `revised: true` = the second answer passed the check; `false` = it failed again and the agent used its fallback.
 

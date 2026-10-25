@@ -1,0 +1,11 @@
+**/node_modules
+**/.env
+**/.env.*
+!**/.env.example
+.venv
+logs
+data/out
+web/dist
+.git
+docs
+.superpowers

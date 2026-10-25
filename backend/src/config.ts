@@ -24,7 +24,10 @@ function readProxyToken(stateDir: string): string {
 
 export interface Config {
   port: number;
+  /** 0.0.0.0 inside Docker so the published port reaches the server. */
+  host: string;
   logsDir: string;
+  webDir: string;
   meterless: { baseUrl: string; token: string; model: string; deepModel: string };
   zetaris: {
     restUrl: string;
@@ -49,7 +52,9 @@ export function loadDotEnv(): void {
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   return {
     port: Number(env.PORT) || 4000,
+    host: env.HOST || '127.0.0.1',
     logsDir: root + 'logs',
+    webDir: root + 'web/dist',
     meterless: {
       baseUrl: env.METERLESS_BASE_URL ?? 'http://127.0.0.1:8088/v1',
       token: env.METERLESS_RUNTIME_TOKEN || readProxyToken(env.METERLESS_STATE_DIR ?? defaultStateDir(env)),

@@ -1,10 +1,177 @@
 # Ledger Lens
 
-AI agents that find money leaks in a freelancer's finances. Every number comes from Zetaris, every model call goes through Meterless Nightshift to Nemotron, and every action waits for the user's approval.
+Sara is a freelance designer. She has nine clients, a stack of subscriptions, and no time to look at her books. Money slips away: hours she never billed, a tool that got more expensive, a client who pays late, a project priced too low.
 
-See [docs/plan.md](docs/plan.md) for the full architecture and work split, and [docs/contracts.md](docs/contracts.md) for the shared contracts.
+Ledger Lens is an AI finance team that finds those leaks for her. Four agents read her data through Zetaris, reason with NVIDIA Nemotron through Meterless Nightshift, and hand her a short brief with three ranked moves. **Nothing happens without her approval:** each move waits for her to approve or reject it, and the agents remember her decisions on the next run.
 
-## Repo layout
+## What works today
+
+| Part | What it does |
+| --- | --- |
+| **Leak Hunter** | Six SQL checks over the Zetaris views find the leaks (unbilled hours, price rise, unused tool, late payer, underpricing, duplicate tool). Nemotron Lightning ranks them. |
+| **Explainer** | Answers "Why?" questions with cited evidence. The Markovian engine reasons step by step and drops any claim the data does not back. |
+| **Forecaster** | 6-month cash forecast computed in code, plus what-ifs: lose a client, raise prices by N%. |
+| **CFO** | Picks three moves with EUR amounts (Nemotron Ultra). H-MEM remembers what Sara approved or rejected and adjusts the ranking, with a visible `memory_note` (the "memory moment"). |
+| **Dashboard** | Brief, findings with evidence, forecast and what-ifs, approve / reject. Status dots show whether Zetaris and Nightshift are live. |
+| **Traces** | Every run writes `logs/<run_id>.jsonl`: each agent step and model call. |
+| **Evals** | `evals/check_findings.py` compares the findings with the answer key: **6/6 found, 0 false alarms**. 124 backend tests pass. |
+
+**Known limits**
+
+- H-MEM memories live in memory, so restarting the backend forgets past decisions.
+- Nightshift is a desktop app (Windows / macOS). Without it, the agents fall back to deterministic answers: the leaks and numbers are the same, but the wording is fixed.
+- A live run with Nemotron takes about 1.5 to 4 minutes.
+
+## Architecture
+
+```
+ Postgres (synthetic data) ─┐
+                            ├─► Zetaris: 4 views ─► Agents ─────────────────► Nightshift ─► Nemotron
+ FX rates (public REST) ────┘   client_profitability   Leak Hunter               (Meterless)    Lightning (fast)
+                                cash_position          Explainer  + Markovian                   Ultra (deep)
+                                subscription_usage     Forecaster + World Model
+                                ar_aging               CFO        + H-MEM
+                                                         │
+                                       Fastify API + web dashboard on one port (4000)
+```
+
+Agents read data only through Zetaris views (SELECT only). Details: [docs/architecture.md](docs/architecture.md), API and data contracts: [docs/contracts.md](docs/contracts.md).
+
+## Quick start (Docker, any PC)
+
+**Level 1: the app with mock data and no AI keys.** You need [Docker Desktop](https://www.docker.com/products/docker-desktop/) and Git.
+
+```bash
+git clone https://github.com/reda253/genAI.git
+cd genAI
+docker compose up -d --build
+```
+
+Open http://localhost:4000 and click **Run Audit**.
+
+This starts Postgres, loads the dataset into it (the `seed` container runs once and exits), and starts the app. With no `.env` file, the app reads the four views from committed fixtures (`ZETARIS_MOCK=1`), and the Nightshift dot in the navbar is red because no token is set. The run still finds all six leaks.
+
+> **Windows:** run Docker commands from PowerShell or cmd. From Git Bash, `--build` fails with `pass "--allow=fs.read=Dockerfile"`.
+
+Stop with `docker compose down`. Reset everything, including the database, with `docker compose down -v`.
+
+## Level 2: real Nemotron through Nightshift
+
+1. Install Meterless Nightshift and start it.
+2. In **Setup > Providers**, add your NVIDIA API key. The key stays in Nightshift only: never put it in `.env` or in the repo.
+3. Set up the lanes: **fast** → `nvidia/nemotron-3.5-lightning-30b-a3b`, **deep** → `nvidia/nemotron-3-ultra-550b-a55b`.
+4. Copy the runtime token from **Console** into a `.env` file at the repo root:
+   ```bash
+   cp .env.example .env
+   # then set METERLESS_RUNTIME_TOKEN=<token from Nightshift Console>
+   ```
+5. Restart the app: `docker compose up -d`.
+
+The container reaches Nightshift on your machine through `host.docker.internal:8088`. The Nightshift dot turns green when the health check says `online`. Check it with `curl http://localhost:4000/api/health`.
+
+## Level 3: real data through Zetaris
+
+1. Start the Zetaris platform (Participant Setup Guide steps 1.3 to 1.8; `./verify.sh` should print 9/9). It needs a registered account and about 8 GB of RAM, so it runs on the host, not in our compose file.
+2. Put your Zetaris API key in `.env` (`ZETARIS_API_KEY`).
+3. Register the sources and create the four views:
+   ```bash
+   ./zetaris/setup_zetaris.sh             # registers ledger_lens_pg + fx_rest, creates the views, checks the numbers
+   ./zetaris/setup_zetaris.sh --dry-run   # preview the SQL without calling Zetaris
+   ./zetaris/setup_zetaris.sh --verify-only
+   ```
+   The script prints the expected-value checks (unbilled hours, Adobe price rise, Webflow unused, Nordwind late payer, Kestrel underpricing, Figma duplicate, closing cash €8,420). On Linux the Postgres host is auto-detected; if your Zetaris containers use another address, set `ZETARIS_PG_HOST` to the docker-bridge or LAN IP.
+4. Set `ZETARIS_MOCK=0` in `.env` and restart: `docker compose up -d`.
+
+Full details, troubleshooting and the screenshot checklist: [zetaris/README.md](zetaris/README.md). After regenerating data, rebuild the mock fixtures with `python zetaris/generate_mocks.py`.
+
+## Developer setup (app without Docker)
+
+Needs Node 20.12+, Python 3.11+, and Docker for Postgres.
+
+```bash
+cp .env.example .env                              # fill in your values
+docker compose -f infra/docker-compose.yml up -d  # Postgres on port 5433
+python -m venv .venv
+.venv/Scripts/pip install -r data/requirements.txt   # macOS/Linux: .venv/bin/pip
+.venv/Scripts/python data/generate.py
+.venv/Scripts/python data/load_postgres.py
+```
+
+Then, in two terminals:
+
+```bash
+cd backend && npm install && npm run dev   # API on http://localhost:4000
+cd web && npm install && npm run dev       # dashboard on http://localhost:5173
+```
+
+With the native backend, Nightshift's token is read from `METERLESS_RUNTIME_TOKEN` or, if that is empty, from Nightshift's own state folder.
+
+## Checking results
+
+| Check | Command |
+| --- | --- |
+| Findings vs answer key (needs a finished run) | `python evals/check_findings.py` |
+| Data and AI layers (Setup Guide, Check 3) | `.venv/Scripts/python scripts/smoke_test.py` (`pip install openai python-dotenv requests` once) |
+| Backend tests and typecheck | `cd backend && npm test && npx tsc --noEmit` |
+| Run traces from Docker | `docker compose cp app:/app/logs/. ./logs`, then open `logs/<run_id>.jsonl` |
+
+## Configuration
+
+Every variable in [.env.example](.env.example). All are optional for Level 1.
+
+| Variable | Default | What |
+| --- | --- | --- |
+| `ZETARIS_API_KEY` | empty | Zetaris API key (Level 3) |
+| `ZETARIS_REST_URL` | `http://localhost:8888/api/v1.0` | Zetaris REST API. Docker uses `DOCKER_ZETARIS_REST_URL` instead |
+| `ZETARIS_ORG_ID` | `1` | Zetaris organisation |
+| `ZETARIS_MOCK` | `1` in Docker | `1` = read the views from `backend/src/zetaris/mock/`, `0` = real Zetaris |
+| `ZETARIS_VIEW_SCHEMA` | `ledger_lens` | Zetaris container that holds the views |
+| `ZETARIS_PG_DATASOURCE` | `ledger_lens_pg` | Postgres datasource name in Zetaris |
+| `ZETARIS_PG_HOST` | auto | Postgres host as seen from the Zetaris containers |
+| `ZETARIS_QUERY_LIMIT` | `1000` | Row limit per view query |
+| `ZETARIS_TIMEOUT_MS` | `120000` | Zetaris query timeout |
+| `METERLESS_BASE_URL` | `http://127.0.0.1:8088/v1` | Nightshift API. Docker uses `DOCKER_METERLESS_BASE_URL` instead |
+| `METERLESS_RUNTIME_TOKEN` | empty | Token from Nightshift Console (Level 2) |
+| `METERLESS_MODEL` | `nvidia/nemotron-3.5-lightning-30b-a3b` | Fast model (Leak Hunter) |
+| `METERLESS_DEEP_MODEL` | `nvidia/nemotron-3-ultra-550b-a55b` | Deep model (Explainer, CFO) |
+| `DOCKER_METERLESS_BASE_URL` | `http://host.docker.internal:8088/v1` | Nightshift as seen from the app container |
+| `DOCKER_ZETARIS_REST_URL` | `http://host.docker.internal:8888/api/v1.0` | Zetaris as seen from the app container |
+| `POSTGRES_HOST` | `localhost` | Postgres host for the native loader |
+| `POSTGRES_PORT` | `5433` | Postgres port on the host |
+| `POSTGRES_DB` | `ledger_lens` | Database name |
+| `POSTGRES_USER` | `ledger` | Database user |
+| `POSTGRES_PASSWORD` | `ledger_dev` | Database password (applied only when the volume is first created) |
+| `PORT` | `4000` | API port |
+| `HOST` | `127.0.0.1` (`0.0.0.0` in Docker) | Address the API binds to |
+| `VITE_API_URL` | `http://localhost:4000` | API URL for the dev dashboard; empty = same origin |
+| `VITE_USE_MOCKS` | `false` | `true` = the dashboard uses its own mock data |
+
+## Sponsor tech
+
+- **Zetaris:** the only data path. Two sources (Postgres, FX REST API) federated into four views. Client: `backend/src/zetaris/client.ts`.
+- **Meterless:** Nightshift is the AI provider (`backend/src/llm/nightshift.ts`). Three Meterless engines run inside the backend:
+  - **World Model** (`backend/src/engines/world-model/`): fact and entity graph of clients, vendors, subscriptions, invoices and findings. Adapter: `worldModelAdapter.ts`.
+  - **H-MEM** (`backend/src/engines/hmem/`): Sara's approve / reject decisions across runs, used by the CFO. Adapter: `hmemAdapter.ts`.
+  - **Markovian** (`backend/src/engines/markovian/`): bounded step-by-step reasoning for the Explainer. Adapter: `markovianAdapter.ts`.
+
+  Test evidence: [docs/engine-tests.md](docs/engine-tests.md).
+- **NVIDIA Nemotron:** Nemotron 3.5 Lightning ranks the leaks; Nemotron 3 Ultra writes the explanations and the CFO moves.
+
+Submission details: [metadata.json](metadata.json).
+
+## Troubleshooting
+
+| Problem | Fix |
+| --- | --- |
+| Port 4000 or 5433 already in use | Stop the other program, or change the left side of `ports:` in `docker-compose.yml` / `POSTGRES_PORT` |
+| `seed` exits with an error | `docker compose logs seed`. A database created earlier with another password: `docker compose down -v`, then `up` again |
+| Health says `nightshift_status: "unauthorized"` | Nightshift is reachable but the token is wrong or missing: copy it again from Console into `METERLESS_RUNTIME_TOKEN` |
+| Health says `nightshift_status: "offline"` | Nightshift is not running, or not on port 8088: set `DOCKER_METERLESS_BASE_URL` |
+| Zetaris containers stopped (exit 137, out of memory) | `docker start zetaris-postgres-1 zetaris-driver-1 zetaris-api-1 zetaris-ui-1` |
+| Navbar shows **MOCK DATA** | The dashboard uses its own mock data: click the toggle to switch to **LIVE API** |
+| `pass "--allow=fs.read=Dockerfile"` | You are in Git Bash on Windows: use PowerShell or cmd |
+
+## Team and repo layout
 
 | Folder | Owner | What |
 | --- | --- | --- |
@@ -19,65 +186,11 @@ See [docs/plan.md](docs/plan.md) for the full architecture and work split, and [
 | `scripts/` | P1 | smoke test |
 | `logs/` | — | run traces (generated, not committed) |
 
-## Setup
+**Pre-existing code:** the three Meterless engine reference implementations in `backend/src/engines/` (Apache 2.0) come from [Meterless](https://github.com/Meterless/Meterless).
 
-1. `cp .env.example .env` and fill in your own values. **Never commit `.env`.**
-2. Postgres: `docker compose -f infra/docker-compose.yml up -d`
-3. Data: `python data/generate.py && python data/load_postgres.py`
-4. Zetaris: `./zetaris/setup_zetaris.sh` (registers the Postgres + FX sources, creates the four views, verifies the numbers)
-5. Backend: `cd backend && npm install && npm run dev`
-6. Web: `cd web && npm install && npm run dev`
-
-### Zetaris setup (P2)
-
-The Zetaris platform must be running first (Participant Setup Guide steps
-1.3–1.8; `./verify.sh` should print 9/9). Put your API key in `.env` and set
-`ZETARIS_MOCK=0` for the real views.
-
-```bash
-# registers ledger_lens_pg + fx_rest and creates the four contract views
-./zetaris/setup_zetaris.sh
-
-# preview the SQL without calling Zetaris
-./zetaris/setup_zetaris.sh --dry-run
-
-# re-check the numbers only
-./zetaris/setup_zetaris.sh --verify-only
-```
-
-The script prints the expected-value checks (unbilled hours, Adobe price rise,
-Webflow unused, Nordwind late payer, Kestrel underpricing, Figma duplicate,
-closing cash €8,420). On Linux the Postgres host is auto-detected; if your
-Zetaris containers use another address, set `ZETARIS_PG_HOST` to the
-docker-bridge or LAN IP. Full details, troubleshooting, and the screenshot
-checklist are in [zetaris/README.md](zetaris/README.md).
-
-Without Zetaris, keep `ZETARIS_MOCK=1`: the backend reads the committed view
-fixtures in `backend/src/zetaris/mock/` and still runs the whole pipeline.
-Rebuild them after regenerating data with `python zetaris/generate_mocks.py`.
-
-### Meterless Engines (P4)
-
-Ledger Lens integrates three reference engines from [Meterless](https://github.com/Meterless/Meterless) inside `backend/src/engines/`, wired to Meterless Nightshift for Nemotron generation:
-
-1. **World Model (`backend/src/engines/world-model/`)**:
-   - Shared fact and entity graph representing clients, vendors, subscriptions, invoices, and detected leak findings.
-   - Connected via `backend/src/engines/worldModelAdapter.ts` to ingest Zetaris views (`client_profitability`, `subscription_usage`, `ar_aging`) and query enriched entity contexts (`getEntityContext`).
-
-2. **H-MEM (`backend/src/engines/hmem/`)**:
-   - Hierarchical memory engine storing Sara's decisions (approvals/rejections with notes) across runs.
-   - Connected via `backend/src/engines/hmemAdapter.ts` to retrieve past decisions during CFO brief synthesis, adjusting move urgency and ranking while generating human-readable `memory_note` annotations (the **Memory Moment**).
-
-3. **Markovian (`backend/src/engines/markovian/`)**:
-   - Bounded-step iterative reasoning engine carrying forward verified evidence and discarding ungrounded claims.
-   - Connected via `backend/src/engines/markovianAdapter.ts` to investigate margin drop questions chunk-by-chunk across finding hypotheses.
-
-All engine conformance tests and adapter integration tests are passing. See [docs/engine-tests.md](docs/engine-tests.md) for full test execution evidence.
-
-_Remaining section to fill on the integration machine: How the agents reason (P5)._
-
-## Git rules
+**Git rules**
 
 - Branches: `p1-backend`, `p2-zetaris`, `p3-data`, `p4-engines`, `p5-reasoning`, `p6-web`
 - Small pull requests into `main`, at least once a day; Reda reviews and merges
 - No large files: generated data and logs stay out of Git
+- Never commit `.env` or keys

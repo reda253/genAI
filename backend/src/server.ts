@@ -1,6 +1,7 @@
 // The 10 routes of docs/contracts.md §4. Errors: { error: { code, message } }.
 import Fastify, { type FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
+import fastifyStatic from '@fastify/static';
 import { createOrchestrator, NoRunYetError, NotFoundError, RunInProgressError } from './agents/orchestrator.ts';
 import type { Scenario } from './agents/types.ts';
 import type { RuntimeStatus } from './llm/nightshift.ts';
@@ -8,6 +9,8 @@ import type { RuntimeStatus } from './llm/nightshift.ts';
 export interface ServerDeps {
   orchestrator: ReturnType<typeof createOrchestrator>;
   checks: { zetaris(): Promise<boolean>; nightshift(): Promise<RuntimeStatus> };
+  /** Built web app (web/dist) to serve on the same port; the Docker image sets it. */
+  webDir?: string;
 }
 
 const explainBody = {
@@ -27,9 +30,10 @@ const decisionBody = {
   properties: { decision: { enum: ['approve', 'reject'] }, note: { type: ['string', 'null'] } },
 };
 
-export function buildServer({ orchestrator: o, checks }: ServerDeps): FastifyInstance {
+export function buildServer({ orchestrator: o, checks, webDir }: ServerDeps): FastifyInstance {
   const app = Fastify();
   app.register(cors, { origin: 'http://localhost:5173' });
+  if (webDir) app.register(fastifyStatic, { root: webDir });
   // Allow an empty body with content-type: application/json (fetch helpers send it on POST /api/runs).
   app.addContentTypeParser('application/json', { parseAs: 'string' }, (_req, body, done) => {
     try {

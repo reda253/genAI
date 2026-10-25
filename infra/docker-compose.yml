@@ -1,4 +1,6 @@
 # Local Postgres for Ledger Lens.
+# The root docker-compose.yml includes this file (Postgres + seed + app in one command).
+# Use this file alone for Postgres only, e.g. for native development.
 #
 # Start from the repo root:
 #   docker compose -f infra/docker-compose.yml up -d

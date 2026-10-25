@@ -40,3 +40,8 @@ test('token falls back to <stateDir>/proxy-token when env has none', () => {
   expect(loadConfig({ METERLESS_STATE_DIR: dir, METERLESS_RUNTIME_TOKEN: 'env' }).meterless.token).toBe('env');
   expect(loadConfig({ METERLESS_STATE_DIR: join(dir, 'missing') }).meterless.token).toBe('');
 });
+
+test('HOST defaults to loopback, overridable', () => {
+  expect(loadConfig({}).host).toBe('127.0.0.1');
+  expect(loadConfig({ HOST: '0.0.0.0' }).host).toBe('0.0.0.0');
+});

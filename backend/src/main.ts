@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { loadConfig, loadDotEnv } from './config.ts';
 import { autoDetect, createNightshift } from './llm/nightshift.ts';
 import { createOrchestrator } from './agents/orchestrator.ts';
@@ -35,7 +36,8 @@ const app = buildServer({
     nightshift: () => llm.status(),
     zetaris: () => zetaris.ping(),
   },
+  webDir: existsSync(config.webDir) ? config.webDir : undefined,
 });
 
-await app.listen({ port: config.port, host: '127.0.0.1' });
-console.log(`Ledger Lens API on http://127.0.0.1:${config.port}`);
+await app.listen({ port: config.port, host: config.host });
+console.log(`Ledger Lens API on http://${config.host}:${config.port}`);

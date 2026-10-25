@@ -1,0 +1,33 @@
+# Whole stack on any PC: docker compose up -d --build, then open http://localhost:4000
+# Zetaris and Nightshift run on the host (see README); without them the app uses mock views and fallbacks.
+name: ledger-lens
+include:
+  - infra/docker-compose.yml # postgres on host port 5433
+services:
+  seed: # one-shot: deterministic data into Postgres
+    image: python:3.12-slim
+    working_dir: /repo
+    volumes: [".:/repo:ro"]
+    environment:
+      DATABASE_URL: "postgresql://${POSTGRES_USER:-ledger}:${POSTGRES_PASSWORD:-ledger_dev}@postgres:5432/${POSTGRES_DB:-ledger_lens}"
+    # The scripts write next to themselves, so run a copy and keep the repo read-only.
+    command: sh -c "cp -r /repo/data /tmp/data && cd /tmp && pip install -q --root-user-action=ignore -r data/requirements.txt && python data/generate.py && python data/load_postgres.py"
+    depends_on: { postgres: { condition: service_healthy } }
+  app:
+    build: .
+    image: ledger-lens-app
+    ports: ["4000:4000"]
+    env_file: [{ path: .env, required: false }]
+    environment:
+      # Pinned: a native-dev PORT/HOST in .env must not break the published port and healthcheck.
+      PORT: "4000"
+      HOST: 0.0.0.0
+      # localhost inside the container is the container: reach host services instead.
+      ZETARIS_MOCK: ${ZETARIS_MOCK:-1}
+      METERLESS_BASE_URL: ${DOCKER_METERLESS_BASE_URL:-http://host.docker.internal:8088/v1}
+      ZETARIS_REST_URL: ${DOCKER_ZETARIS_REST_URL:-http://host.docker.internal:8888/api/v1.0}
+    extra_hosts: ["host.docker.internal:host-gateway"]
+    volumes: ["ledger_lens_logs:/app/logs"]
+    depends_on: { seed: { condition: service_completed_successfully } }
+volumes:
+  ledger_lens_logs:

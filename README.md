@@ -23,9 +23,9 @@ Ledger Lens is an AI finance team that finds those leaks for her. Four agents re
 
 ## Screenshots
 
-From a live run (Zetaris views, Nemotron through Nightshift), 26 Oct 2026.
+From live runs with Nemotron through Nightshift, 26 Oct 2026.
 
-**Morning brief:** cash today, monthly leak recovery, and the three moves ranked by the CFO agent.
+**Morning brief:** what leaks per month, the cash at risk, what today's three moves recover, what changed since the last run, and the three moves ranked by the CFO agent.
 
 ![Morning brief](docs/screenshots/brief.png)
 
@@ -37,7 +37,7 @@ From a live run (Zetaris views, Nemotron through Nightshift), 26 Oct 2026.
 
 ![Evidence drawer for the Nordwind late payer](docs/screenshots/leaks-evidence.png)
 
-**Forecast and what-if:** six months of cash computed in code; here, losing Nordwind Studio costs €14,400.
+**Forecast and what-if:** six months of cash computed in code; here, losing Nordwind Studio costs €7,200 over six months.
 
 ![Forecast with the lose-a-client what-if](docs/screenshots/forecast-whatif.png)
 

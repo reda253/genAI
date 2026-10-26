@@ -98,6 +98,8 @@ class ApiService {
       throw error;
     }
 
+    // 204 No Content (DELETE /api/memories/:id) has no body to parse
+    if (res.status === 204) return undefined as T;
     return res.json() as Promise<T>;
   }
 

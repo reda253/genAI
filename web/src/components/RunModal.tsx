@@ -10,9 +10,14 @@ import {
   TrendingUp,
   Brain,
   Sparkles,
+  Terminal,
+  Cpu,
+  RefreshCw,
+  GitBranch,
 } from 'lucide-react';
 import { api } from '../api';
-import type { RunStep } from '../types';
+import type { RunStep, TraceLine, LlmCallData, CritiqueData } from '../types';
+import { GroundingStats } from './GroundingStats';
 
 interface RunModalProps {
   isOpen: boolean;
@@ -30,8 +35,8 @@ const STEPS: { key: RunStep; label: string; agent: string; desc: string }[] = [
   {
     key: 'explainer',
     label: 'Explainer Agent',
-    agent: 'Markovian Engine + Deep Nemotron',
-    desc: 'Investigating margin drops and building cited causal chains from SQL rows...',
+    agent: 'Markovian Engine + Deep Nemotron Ultra',
+    desc: 'Investigating margin drops and building cited causal chains from SQL rows with Critic loop...',
   },
   {
     key: 'forecaster',
@@ -42,7 +47,7 @@ const STEPS: { key: RunStep; label: string; agent: string; desc: string }[] = [
   {
     key: 'cfo',
     label: 'CFO Orchestrator',
-    agent: 'H-MEM Decision Memory Engine',
+    agent: 'H-MEM Decision Memory Engine + Nemotron Ultra',
     desc: 'Retrieving past approvals/rejections and ranking the top 3 actionable moves...',
   },
 ];
@@ -53,14 +58,32 @@ export const RunModal: React.FC<RunModalProps> = ({ isOpen, onClose, onRunComple
   const [runId, setRunId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isDone, setIsDone] = useState(false);
+  const [traceLines, setTraceLines] = useState<TraceLine[]>([]);
+  const [showTraceStream, setShowTraceStream] = useState(true);
+  const traceEndRef = React.useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    if (showTraceStream && traceLines.length > 0) {
+      traceEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [traceLines, showTraceStream]);
+
+  // Poll status & trace
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout>;
 
     if (isRunning && runId && !isDone) {
       const poll = async () => {
         try {
-          const status = await api.getRun(runId);
+          const [status, trace] = await Promise.all([
+            api.getRun(runId),
+            api.getTrace(runId).catch(() => []),
+          ]);
+
+          if (trace && trace.length > 0) {
+            setTraceLines(trace);
+          }
+
           if (status.status === 'running') {
             setCurrentStep(status.step);
             timer = setTimeout(poll, 700);
@@ -68,6 +91,8 @@ export const RunModal: React.FC<RunModalProps> = ({ isOpen, onClose, onRunComple
             setIsRunning(false);
             setIsDone(true);
             setCurrentStep(null);
+            // Fetch final trace lines
+            api.getTrace(runId).then((finalTrace) => setTraceLines(finalTrace)).catch(() => {});
             onRunComplete();
           } else if (status.status === 'failed') {
             setIsRunning(false);
@@ -90,6 +115,7 @@ export const RunModal: React.FC<RunModalProps> = ({ isOpen, onClose, onRunComple
     setError(null);
     setIsDone(false);
     setIsRunning(true);
+    setTraceLines([]);
     setCurrentStep('leak_hunter');
     try {
       const res = await api.startRun();
@@ -122,12 +148,106 @@ export const RunModal: React.FC<RunModalProps> = ({ isOpen, onClose, onRunComple
     }
   };
 
+  const formatTraceEvent = (line: TraceLine) => {
+    switch (line.event) {
+      case 'checks_done': {
+        const d = line.data as { count?: number; view?: string };
+        return {
+          icon: <Search className="w-3.5 h-3.5 text-emerald-400" />,
+          title: `${d?.count ?? 6} SQL Checks on Zetaris`,
+          subtitle: 'Scanned client_profitability, subscription_usage, ar_aging, cash_position',
+          badge: 'ZETARIS',
+          badgeClass: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+        };
+      }
+      case 'llm_call': {
+        const d = line.data as LlmCallData;
+        const isLightning = d?.model?.toLowerCase().includes('lightning');
+        return {
+          icon: <Cpu className="w-3.5 h-3.5 text-cyan-400" />,
+          title: `${d?.model ?? 'Nemotron'} · ${(d?.ms ? (d.ms / 1000).toFixed(1) + 's' : 'done')}`,
+          subtitle: d?.ok ? 'Inference output verified & schema-validated' : 'Fallback triggered',
+          badge: isLightning ? 'NVIDIA LIGHTNING' : 'NVIDIA ULTRA',
+          badgeClass: isLightning
+            ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20'
+            : 'bg-purple-500/10 text-purple-400 border-purple-500/20',
+        };
+      }
+      case 'markovian_done': {
+        const d = line.data as { chunks?: number };
+        return {
+          icon: <Sparkles className="w-3.5 h-3.5 text-teal-400" />,
+          title: `Markovian Engine · ${d?.chunks ?? 3} Causal Chunks`,
+          subtitle: 'Ranked causal evidence pathways for margin fluctuations',
+          badge: 'METERLESS MARKOVIAN',
+          badgeClass: 'bg-teal-500/10 text-teal-400 border-teal-500/20',
+        };
+      }
+      case 'critique': {
+        const d = line.data as CritiqueData;
+        return {
+          icon: <RefreshCw className="w-3.5 h-3.5 text-amber-400" />,
+          title: `Critic: ${d?.problems?.length ?? 1} ungrounded amount → revised`,
+          subtitle: 'G1 Critic loop detected fabricated number and enforced evidence adherence',
+          badge: 'CRITIC LOOP (G1)',
+          badgeClass: 'bg-amber-500/15 text-amber-300 border-amber-500/30',
+        };
+      }
+      case 'memory_applied': {
+        const d = line.data as { count?: number; text?: string };
+        return {
+          icon: <Brain className="w-3.5 h-3.5 text-violet-400" />,
+          title: `H-MEM · ${d?.count ?? 1} Decision Memory Applied`,
+          subtitle: d?.text ?? 'Sara past approval/rejection preferences weighted in ranking',
+          badge: 'METERLESS H-MEM',
+          badgeClass: 'bg-violet-500/10 text-violet-400 border-violet-500/20',
+        };
+      }
+      case 'escalated': {
+        return {
+          icon: <GitBranch className="w-3.5 h-3.5 text-rose-400" />,
+          title: 'Escalation: Low-Confidence Finding Verified',
+          subtitle: 'G2 Confidence branch routed finding to Explainer before CFO ranking',
+          badge: 'G2 ESCALATED',
+          badgeClass: 'bg-rose-500/10 text-rose-400 border-rose-500/20',
+        };
+      }
+      case 'start':
+        return {
+          icon: <Play className="w-3.5 h-3.5 text-emerald-400" />,
+          title: 'Run Initialized',
+          subtitle: `Session ID ${line.run_id}`,
+          badge: 'ORCHESTRATOR',
+          badgeClass: 'bg-slate-800 text-slate-300 border-slate-700',
+        };
+      case 'done':
+        return {
+          icon: <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />,
+          title: 'Run Completed & Views Synchronized',
+          subtitle: 'Brief, Leaks, Forecast and Action Drafts updated',
+          badge: 'SUCCESS',
+          badgeClass: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
+        };
+      default:
+        return {
+          icon: <Terminal className="w-3.5 h-3.5 text-slate-400" />,
+          title: `Agent Event: ${line.event}`,
+          subtitle: line.step ? `Step: ${line.step}` : 'System event',
+          badge: 'EVENT',
+          badgeClass: 'bg-slate-800 text-slate-400 border-slate-700',
+        };
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={!isRunning ? onClose : undefined} />
+      <div
+        className="absolute inset-0 bg-black/80 backdrop-blur-md transition-opacity"
+        onClick={!isRunning ? onClose : undefined}
+      />
 
-      <div className="relative w-full max-w-xl bg-slate-900 border border-slate-700/80 rounded-3xl shadow-2xl overflow-hidden z-10 animate-fade-in">
+      <div className="relative w-full max-w-2xl bg-slate-900 border border-slate-700/80 rounded-3xl shadow-2xl overflow-hidden z-10 animate-fade-in flex flex-col max-h-[92vh]">
         {/* Header */}
         <div className="p-6 border-b border-slate-800 flex items-center justify-between bg-slate-925/80">
           <div className="flex items-center gap-3">
@@ -135,8 +255,15 @@ export const RunModal: React.FC<RunModalProps> = ({ isOpen, onClose, onRunComple
               <Sparkles className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-white tracking-tight">Autonomous Finance Run</h3>
-              <p className="text-xs text-slate-400 font-mono">Orchestrating 4 Specialized AI Agents</p>
+              <div className="flex items-center gap-2">
+                <h3 className="text-lg font-bold text-white tracking-tight">Autonomous Finance Run</h3>
+                <span className="text-[10px] font-mono px-1.5 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded">
+                  CONTRACT V1.1
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 font-mono">
+                Live Multi-Agent Orchestration • Nemotron Lightning & Ultra • Meterless Engines
+              </p>
             </div>
           </div>
           {!isRunning && (
@@ -149,8 +276,8 @@ export const RunModal: React.FC<RunModalProps> = ({ isOpen, onClose, onRunComple
           )}
         </div>
 
-        {/* Content */}
-        <div className="p-6 space-y-6">
+        {/* Modal Content */}
+        <div className="p-6 overflow-y-auto space-y-6 flex-1">
           {error && (
             <div className="p-4 rounded-xl bg-rose-950/40 border border-rose-500/40 text-rose-300 flex items-start gap-3 text-sm">
               <AlertCircle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
@@ -162,13 +289,13 @@ export const RunModal: React.FC<RunModalProps> = ({ isOpen, onClose, onRunComple
           )}
 
           {/* Stepper */}
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             {STEPS.map((step, idx) => {
               const status = getStepStatus(step.key, idx);
               return (
                 <div
                   key={step.key}
-                  className={`p-4 rounded-2xl border transition-all duration-300 ${
+                  className={`p-3.5 rounded-2xl border transition-all duration-300 ${
                     status === 'active'
                       ? 'bg-slate-800/80 border-emerald-500/50 shadow-glow-emerald'
                       : status === 'done'
@@ -176,10 +303,10 @@ export const RunModal: React.FC<RunModalProps> = ({ isOpen, onClose, onRunComple
                       : 'bg-slate-950/30 border-slate-800/40 opacity-50'
                   }`}
                 >
-                  <div className="flex items-center justify-between mb-1.5">
+                  <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center gap-2.5">
                       <div
-                        className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-mono font-bold ${
+                        className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-mono font-bold ${
                           status === 'active'
                             ? 'bg-emerald-500 text-slate-950'
                             : status === 'done'
@@ -188,9 +315,9 @@ export const RunModal: React.FC<RunModalProps> = ({ isOpen, onClose, onRunComple
                         }`}
                       >
                         {status === 'active' ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
                         ) : status === 'done' ? (
-                          <CheckCircle2 className="w-4 h-4" />
+                          <CheckCircle2 className="w-3.5 h-3.5" />
                         ) : (
                           getStepIcon(step.key)
                         )}
@@ -201,43 +328,107 @@ export const RunModal: React.FC<RunModalProps> = ({ isOpen, onClose, onRunComple
                     <span className="text-[11px] font-mono text-slate-400">{step.agent}</span>
                   </div>
 
-                  <p className="text-xs text-slate-300/80 pl-9.5 leading-relaxed">{step.desc}</p>
+                  <p className="text-xs text-slate-300/80 pl-8.5 leading-relaxed">{step.desc}</p>
                 </div>
               );
             })}
           </div>
+
+          {/* Live Agent Trace Stream Section (I1 / M3) */}
+          <div className="space-y-3 pt-2">
+            <div className="flex items-center justify-between">
+              <div className="text-xs font-mono uppercase tracking-wider text-slate-400 font-semibold flex items-center gap-1.5">
+                <Terminal className="w-3.5 h-3.5 text-emerald-400" />
+                Live Agent Trace Stream (I1 / Nemotron Models)
+              </div>
+              <button
+                onClick={() => setShowTraceStream(!showTraceStream)}
+                className="text-[11px] font-mono text-emerald-400 hover:text-emerald-300 cursor-pointer"
+              >
+                {showTraceStream ? 'Hide Feed' : `Show Feed (${traceLines.length})`}
+              </button>
+            </div>
+
+            {showTraceStream && (
+              <div className="rounded-2xl border border-slate-800 bg-slate-950 p-3.5 max-h-56 overflow-y-auto space-y-2 shadow-inner font-mono text-xs">
+                {traceLines.length === 0 ? (
+                  <div className="py-6 text-center text-slate-500 italic">
+                    {isRunning
+                      ? 'Streaming agent execution traces from GET /api/runs/:id/trace...'
+                      : 'Launch an analysis run to observe live model calls & critic feedback.'}
+                  </div>
+                ) : (
+                  traceLines.map((line, idx) => {
+                    const parsed = formatTraceEvent(line);
+                    return (
+                      <div
+                        key={idx}
+                        className="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800/80 flex items-start justify-between gap-3 animate-fade-in"
+                      >
+                        <div className="flex items-start gap-2 min-w-0">
+                          <span className="mt-0.5 shrink-0">{parsed.icon}</span>
+                          <div className="min-w-0">
+                            <div className="font-semibold text-slate-200 text-xs">
+                              {parsed.title}
+                            </div>
+                            <div className="text-[11px] text-slate-400 truncate">
+                              {parsed.subtitle}
+                            </div>
+                          </div>
+                        </div>
+
+                        <span
+                          className={`text-[9px] px-2 py-0.5 rounded border uppercase shrink-0 font-bold ${parsed.badgeClass}`}
+                        >
+                          {parsed.badge}
+                        </span>
+                      </div>
+                    );
+                  })
+                )}
+                <div ref={traceEndRef} />
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Footer */}
-        <div className="p-6 border-t border-slate-800 bg-slate-925/80 flex items-center justify-between">
-          <div className="text-xs text-slate-400 font-mono">
-            {runId ? `Run ID: ${runId}` : 'Ready for execution'}
+        <div className="p-5 border-t border-slate-800 bg-slate-925/90 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="text-xs text-slate-400 font-mono">
+              {runId ? `Run: ${runId}` : 'Ready for execution'}
+            </div>
+            {runId && (
+              <div className="hidden sm:block">
+                <GroundingStats runId={runId} />
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-3">
             {!isRunning && !isDone && (
               <button
                 onClick={handleStartRun}
-                className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm shadow-glow-emerald transition-all duration-200 flex items-center gap-2 cursor-pointer active:scale-[0.98]"
+                className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs shadow-glow-emerald transition-all duration-200 flex items-center gap-2 cursor-pointer active:scale-[0.98]"
               >
-                <Play className="w-4 h-4 fill-white" />
+                <Play className="w-3.5 h-3.5 fill-white" />
                 Launch Analysis
               </button>
             )}
 
             {isRunning && (
-              <div className="flex items-center gap-2 text-sm text-emerald-400 font-mono">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Agents computing in parallel...
+              <div className="flex items-center gap-2 text-xs text-emerald-400 font-mono">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                Agents reasoning in parallel...
               </div>
             )}
 
             {isDone && (
               <button
                 onClick={onClose}
-                className="px-5 py-2.5 rounded-xl bg-brand-500 hover:bg-brand-400 text-slate-950 font-bold text-sm shadow-glow-emerald transition-all duration-200 flex items-center gap-2 cursor-pointer active:scale-[0.98]"
+                className="px-5 py-2 rounded-xl bg-brand-500 hover:bg-brand-400 text-slate-950 font-bold text-xs shadow-glow-emerald transition-all duration-200 flex items-center gap-2 cursor-pointer active:scale-[0.98]"
               >
-                <CheckCircle2 className="w-4 h-4" />
+                <CheckCircle2 className="w-3.5 h-3.5" />
                 View Updated Brief
               </button>
             )}

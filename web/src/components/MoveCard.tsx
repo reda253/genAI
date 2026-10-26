@@ -18,6 +18,7 @@ interface MoveCardProps {
   move: Move;
   onDecide: (id: string, decision: 'approve' | 'reject') => Promise<void>;
   onInspectFinding?: (findingId: string) => void;
+  onDraft?: (move: Move) => void;
 }
 
 const getActionIcon = (type: ActionType) => {
@@ -76,7 +77,12 @@ const getUrgencyBadge = (urgency: Urgency) => {
   }
 };
 
-export const MoveCard: React.FC<MoveCardProps> = ({ move, onDecide, onInspectFinding }) => {
+export const MoveCard: React.FC<MoveCardProps> = ({
+  move,
+  onDecide,
+  onInspectFinding,
+  onDraft,
+}) => {
   const [loadingDecision, setLoadingDecision] = useState<'approve' | 'reject' | null>(null);
 
   const handleAction = async (decision: 'approve' | 'reject') => {
@@ -172,8 +178,19 @@ export const MoveCard: React.FC<MoveCardProps> = ({ move, onDecide, onInspectFin
           <div />
         )}
 
-        {/* Approve / Reject Buttons */}
+        {/* Buttons: Draft & Decision */}
         <div className="flex items-center gap-2">
+          {onDraft && (
+            <button
+              onClick={() => onDraft(move)}
+              className="px-3 py-1.5 rounded-lg border border-slate-700 hover:border-emerald-500/50 hover:bg-emerald-500/10 text-slate-300 hover:text-emerald-300 text-xs font-medium transition-all duration-150 flex items-center gap-1.5 cursor-pointer active:scale-[0.98]"
+              title="Preview AI draft action (email, steps, or invoice)"
+            >
+              <FileText className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Draft</span>
+            </button>
+          )}
+
           {!isResolved ? (
             <>
               <button
@@ -189,7 +206,7 @@ export const MoveCard: React.FC<MoveCardProps> = ({ move, onDecide, onInspectFin
                 className="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-glow-emerald transition-all duration-150 flex items-center gap-1.5 cursor-pointer disabled:opacity-50 active:scale-[0.98]"
               >
                 <Sparkles className="w-3.5 h-3.5" />
-                {loadingDecision === 'approve' ? 'Approving...' : 'Approve Move'}
+                {loadingDecision === 'approve' ? 'Approving...' : 'Approve'}
               </button>
             </>
           ) : (

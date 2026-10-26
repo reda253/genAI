@@ -1,10 +1,14 @@
 import type {
+  ActionDraft,
   Brief,
+  Entity,
   Explanation,
   Finding,
   Forecast,
   HealthResponse,
+  Memory,
   Move,
+  RunChanges,
   RunStatus,
   Scenario,
   TraceLine,
@@ -21,11 +25,29 @@ const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:4000';
 // Live API by default; mock data only when explicitly asked for (VITE_USE_MOCKS=true or the navbar toggle).
 const DEFAULT_USE_MOCKS = import.meta.env.VITE_USE_MOCKS === 'true';
 
+const defaultInitialMemories: Memory[] = [
+  {
+    id: 'mem_01',
+    text: 'Prioritize unbilled hours (bill_hours) above overdue reminders when impact > €1,000',
+    decision: 'approve',
+    action_type: 'bill_hours',
+    created_at: '2026-10-01T08:05:00Z',
+  },
+  {
+    id: 'mem_02',
+    text: 'Always challenge duplicate SaaS charges under €50 immediately',
+    decision: 'approve',
+    action_type: 'dispute_charge',
+    created_at: '2026-10-01T08:06:12Z',
+  },
+];
+
 // Runtime mock store so user approvals/rejections persist during the session
 let mockBriefState: Brief = JSON.parse(JSON.stringify(rawBrief));
 const mockFindingsState: Finding[] = JSON.parse(JSON.stringify(rawFindings));
 const mockForecastState: Forecast = JSON.parse(JSON.stringify(rawForecast));
 const mockWhatIfState = JSON.parse(JSON.stringify(rawWhatIf));
+let mockMemoriesState: Memory[] = [...defaultInitialMemories];
 
 class ApiService {
   private useMocks: boolean = DEFAULT_USE_MOCKS;
@@ -136,9 +158,102 @@ class ApiService {
     return this.request<Brief>('/api/brief');
   }
 
-  // GET /api/runs/:id/trace (contract v1.1). Mock mode has no trace.
+  // GET /api/runs/:id/trace (contract v1.1).
   public async getTrace(runId: string): Promise<TraceLine[]> {
-    if (this.useMocks) return [];
+    if (this.useMocks) {
+      const isPastRun = !this.mockRunStartTimes.has(runId);
+      const startTime = this.mockRunStartTimes.get(runId) || (Date.now() - 10000);
+      const elapsed = isPastRun ? 10000 : (Date.now() - startTime);
+      const lines: TraceLine[] = [
+        { ts: new Date(startTime).toISOString(), run_id: runId, step: null, event: 'start' },
+        {
+          ts: new Date(startTime + 250).toISOString(),
+          run_id: runId,
+          step: 'leak_hunter',
+          event: 'checks_done',
+          data: { count: 6, view: 'zetaris_views' },
+        },
+        {
+          ts: new Date(startTime + 800).toISOString(),
+          run_id: runId,
+          step: 'leak_hunter',
+          event: 'llm_call',
+          data: { model: 'NVIDIA Nemotron 3.5 Lightning', ms: 790, ok: true },
+        },
+      ];
+
+      if (elapsed > 1200) {
+        lines.push(
+          {
+            ts: new Date(startTime + 1500).toISOString(),
+            run_id: runId,
+            step: 'explainer',
+            event: 'llm_call',
+            data: { model: 'NVIDIA Nemotron 3.5 Ultra', ms: 1420, ok: true },
+          },
+          {
+            ts: new Date(startTime + 1900).toISOString(),
+            run_id: runId,
+            step: 'explainer',
+            event: 'markovian_done',
+            data: { chunks: 3 },
+          },
+          {
+            ts: new Date(startTime + 2200).toISOString(),
+            run_id: runId,
+            step: 'explainer',
+            event: 'critique',
+            data: {
+              agent: 'explainer',
+              problems: ['Amount €650 not grounded in Zetaris evidence rows'],
+              revised: true,
+            },
+          }
+        );
+      }
+
+      if (elapsed > 2400) {
+        lines.push(
+          {
+            ts: new Date(startTime + 2800).toISOString(),
+            run_id: runId,
+            step: 'forecaster',
+            event: 'llm_call',
+            data: { model: 'NVIDIA Nemotron 3.5 Lightning', ms: 580, ok: true },
+          }
+        );
+      }
+
+      if (elapsed > 3600) {
+        lines.push(
+          {
+            ts: new Date(startTime + 3900).toISOString(),
+            run_id: runId,
+            step: 'cfo',
+            event: 'memory_applied',
+            data: { count: 1, text: 'H-MEM applied: deprioritized disputed charge' },
+          },
+          {
+            ts: new Date(startTime + 4300).toISOString(),
+            run_id: runId,
+            step: 'cfo',
+            event: 'llm_call',
+            data: { model: 'NVIDIA Nemotron 3.5 Ultra', ms: 1105, ok: true },
+          }
+        );
+      }
+
+      if (elapsed >= 4800) {
+        lines.push({
+          ts: new Date(startTime + 4750).toISOString(),
+          run_id: runId,
+          step: null,
+          event: 'done',
+        });
+      }
+
+      return lines;
+    }
     return this.request<TraceLine[]>(`/api/runs/${encodeURIComponent(runId)}/trace`);
   }
 
@@ -239,6 +354,14 @@ class ApiService {
       } else {
         move.memory_note = 'Rejected by Sara. Stored in Meterless H-MEM; will be deprioritized.';
       }
+      // Add to mock memories
+      mockMemoriesState.unshift({
+        id: `mem_${Date.now()}`,
+        text: `${decision === 'approve' ? 'Prioritize' : 'Deprioritize'} ${move.title} (${move.action_type})`,
+        decision,
+        action_type: move.action_type,
+        created_at: new Date().toISOString(),
+      });
       return JSON.parse(JSON.stringify(move));
     }
     return this.request<Move>(`/api/moves/${id}/decision`, {
@@ -247,9 +370,241 @@ class ApiService {
     });
   }
 
+  // Contract v1.1: POST /api/moves/:id/draft
+  public async draftMove(moveId: string): Promise<ActionDraft> {
+    if (this.useMocks) {
+      const move = mockBriefState.moves.find((m) => m.id === moveId);
+      if (moveId === 'm001' || move?.action_type === 'bill_hours') {
+        return {
+          move_id: moveId,
+          kind: 'invoice_lines',
+          subject: 'Invoice: Professional Services (August – September 2026)',
+          body: `Client: Atlas Co (c01)\n\nLine Item 1: August 2026 Unbilled Development Work\nQuantity: 12 hours @ €60.00/h = €720.00\n\nLine Item 2: September 2026 Unbilled Architecture Review\nQuantity: 10 hours @ €60.00/h = €600.00\n\n────────────────────────────────────────\nTotal Invoice Amount Due: 1,320.00 EUR\nPayment Terms: Net 30\nIBAN: FR76 3000 4000 5000 6000 7000 123`,
+          ungrounded: [],
+        };
+      }
+      if (moveId === 'm002' || move?.action_type === 'send_reminder') {
+        return {
+          move_id: moveId,
+          kind: 'email',
+          subject: 'Payment Reminder: Outstanding Invoices #inv0031 & #inv0038 (4,800.00 EUR)',
+          body: `Dear Nordwind Studio Team,\n\nI hope this message finds you well.\n\nAccording to our accounts receivable records, we have two outstanding invoices past the agreed payment window:\n\n• Invoice inv0031: €2,400.00 (47 days overdue)\n• Invoice inv0038: €2,400.00 (33 days overdue)\nTotal Balance Due: 4,800.00 EUR\n\nPlease let us know if you need any clarification or if payment is already scheduled for processing.\n\nBest regards,\nSara\nFinance Lead`,
+          ungrounded: [],
+        };
+      }
+      if (moveId === 'm003' || move?.action_type === 'cancel_subscription') {
+        return {
+          move_id: moveId,
+          kind: 'steps',
+          subject: null,
+          body: `1. Open Webflow workspace at dashboard.webflow.com/dashboard/billing\n2. Navigate to Plans & Billing > Workspace Plan (CMS Tier).\n3. Click "Cancel Plan" (0 team logins recorded in the past 94 days since 2026-06-29).\n4. Select "Downgrade to Starter Free Workspace".\n5. Verify confirmation email & confirm recurring savings of 29.00 EUR/month.`,
+          ungrounded: [],
+        };
+      }
+      return {
+        move_id: moveId,
+        kind: 'email',
+        subject: `Action: ${move?.title ?? 'Financial Update'}`,
+        body: `Hello,\n\nPlease review the following financial update regarding ${move?.title ?? 'your account'}.\n\nImpact: ${move?.monthly_impact_eur ?? 0} EUR/month\nReason: ${move?.reason ?? 'Financial optimization'}\n\nBest regards,\nSara`,
+        ungrounded: [],
+      };
+    }
+    return this.request<ActionDraft>(`/api/moves/${moveId}/draft`, {
+      method: 'POST',
+    });
+  }
+
+  // Contract v1.1: GET /api/entities/:id
+  public async getEntity(id: string): Promise<Entity> {
+    if (this.useMocks) {
+      if (id === 'c01') {
+        return {
+          id: 'c01',
+          kind: 'client',
+          name: 'Atlas Co',
+          summary: 'Atlas Co (Custom Software Development) billed at €60/h (market: €60/h) with 22 unbilled hours accumulated across August and September 2026.',
+          facts: {
+            client_id: 'c01',
+            client_name: 'Atlas Co',
+            service: 'Custom Software Development',
+            hourly_rate: 60,
+            market_rate: 60,
+            unbilled_hours: 22,
+            unbilled_pct: 21.6,
+            payment_terms: 'Net 30',
+            status: 'Active',
+          },
+          findings: mockFindingsState.filter((f) => f.client_id === 'c01'),
+          invoices: [
+            { invoice_id: 'inv0012', amount: 3600, date: '2026-07-31', status: 'paid' },
+            { invoice_id: 'inv0024', amount: 2400, date: '2026-08-31', status: 'paid' },
+          ],
+        };
+      }
+      if (id === 'c04') {
+        return {
+          id: 'c04',
+          kind: 'client',
+          name: 'Nordwind Studio',
+          summary: 'Nordwind Studio (UI/UX Design) billed at €65/h with 2 overdue invoices totaling €4,800 cash at risk (average 47 days late).',
+          facts: {
+            client_id: 'c04',
+            client_name: 'Nordwind Studio',
+            service: 'UI/UX Design Systems',
+            hourly_rate: 65,
+            cash_at_risk: 4800,
+            avg_days_late: 47,
+            payment_terms: 'Net 15',
+            status: 'Payment Delay Risk',
+          },
+          findings: mockFindingsState.filter((f) => f.client_id === 'c04'),
+          invoices: [
+            { invoice_id: 'inv0031', amount: 2400, days_late: 47, bucket: '>30 days', status: 'overdue' },
+            { invoice_id: 'inv0038', amount: 2400, days_late: 33, bucket: '>30 days', status: 'overdue' },
+          ],
+        };
+      }
+      if (id === 'c07') {
+        return {
+          id: 'c07',
+          kind: 'client',
+          name: 'Kestrel Media',
+          summary: 'Kestrel Media (Brand Motion & Video) billed at €42/h against a market benchmark of €60/h (-30% underpriced gap on 30h/month).',
+          facts: {
+            client_id: 'c07',
+            client_name: 'Kestrel Media',
+            service: 'Brand Motion & Video',
+            hourly_rate: 42,
+            market_rate: 60,
+            monthly_hours: 30,
+            monthly_leak_eur: 540,
+            status: 'Underpriced Rate',
+          },
+          findings: mockFindingsState.filter((f) => f.client_id === 'c07'),
+          invoices: [
+            { invoice_id: 'inv0040', amount: 1260, date: '2026-09-30', status: 'paid' },
+          ],
+        };
+      }
+      if (id === 'sub02') {
+        return {
+          id: 'sub02',
+          kind: 'subscription',
+          name: 'Adobe Creative Cloud',
+          summary: 'Adobe Creative Cloud (All Apps Team) increased from €66.99 to €80.99/month (+20.9% price rise) without team notification.',
+          facts: {
+            subscription_id: 'sub02',
+            vendor: 'Adobe',
+            plan: 'All Apps Team License',
+            monthly_cost: 80.99,
+            previous_cost: 66.99,
+            price_change_pct: 20.9,
+            category: 'Design & Motion',
+            status: 'Price Hike Detected',
+          },
+          findings: mockFindingsState.filter((f) => f.subscription_id === 'sub02'),
+          invoices: [
+            { invoice_id: 'sub_inv_08', amount: 80.99, date: '2026-08-15', status: 'auto_debited' },
+            { invoice_id: 'sub_inv_09', amount: 80.99, date: '2026-09-15', status: 'auto_debited' },
+          ],
+        };
+      }
+      if (id === 'sub03') {
+        return {
+          id: 'sub03',
+          kind: 'subscription',
+          name: 'Figma Organization',
+          summary: 'Figma Organization billed twice in August 2026 (€15.00 duplicate seat charge anomaly detected).',
+          facts: {
+            subscription_id: 'sub03',
+            vendor: 'Figma',
+            plan: 'Professional Editor',
+            monthly_cost: 15.00,
+            duplicate_charges: 1,
+            category: 'UI/UX Tools',
+            status: 'Duplicate Billing',
+          },
+          findings: mockFindingsState.filter((f) => f.subscription_id === 'sub03'),
+          invoices: [
+            { invoice_id: 'figma_aug_1', amount: 15, date: '2026-08-01', status: 'paid' },
+            { invoice_id: 'figma_aug_2', amount: 15, date: '2026-08-03', status: 'duplicate_paid' },
+          ],
+        };
+      }
+      if (id === 'sub05') {
+        return {
+          id: 'sub05',
+          kind: 'subscription',
+          name: 'Webflow CMS Plan',
+          summary: 'Webflow CMS workspace seat has recorded 0 user logins in 94 days (last active 2026-06-29) while incurring €29.00/month.',
+          facts: {
+            subscription_id: 'sub05',
+            vendor: 'Webflow',
+            plan: 'CMS Workspace Tier',
+            monthly_cost: 29.00,
+            days_since_login: 94,
+            last_login_date: '2026-06-29',
+            category: 'Web Publishing',
+            status: 'Zombie Subscription',
+          },
+          findings: mockFindingsState.filter((f) => f.subscription_id === 'sub05'),
+          invoices: [
+            { invoice_id: 'wf_07', amount: 29, date: '2026-07-01', status: 'auto_debited' },
+            { invoice_id: 'wf_08', amount: 29, date: '2026-08-01', status: 'auto_debited' },
+            { invoice_id: 'wf_09', amount: 29, date: '2026-09-01', status: 'auto_debited' },
+          ],
+        };
+      }
+      // Generic fallback entity
+      return {
+        id,
+        kind: id.startsWith('c') ? 'client' : 'subscription',
+        name: id.startsWith('c') ? `Client ${id}` : `Subscription ${id}`,
+        summary: `Entity record ${id} indexed in Zetaris semantic views and World Model.`,
+        facts: { id, status: 'Active' },
+        findings: mockFindingsState.filter((f) => f.client_id === id || f.subscription_id === id),
+        invoices: [],
+      };
+    }
+    return this.request<Entity>(`/api/entities/${id}`);
+  }
+
+  // Contract v1.1: GET /api/changes
+  public async getChanges(): Promise<RunChanges> {
+    if (this.useMocks) {
+      return {
+        previous_run_id: 'run_20260930_080000',
+        new: [mockFindingsState[1]], // f002 unbilled hours
+        resolved: [],
+        changed: [
+          { finding_id: 'f001', field: 'days_late', before: 42, after: 47 },
+        ],
+      };
+    }
+    return this.request<RunChanges>('/api/changes');
+  }
+
+  // Contract v1.1: GET /api/memories
+  public async getMemories(): Promise<Memory[]> {
+    if (this.useMocks) {
+      return JSON.parse(JSON.stringify(mockMemoriesState));
+    }
+    return this.request<Memory[]>('/api/memories');
+  }
+
+  // Contract v1.1: DELETE /api/memories/:id
+  public async deleteMemory(id: string): Promise<void> {
+    if (this.useMocks) {
+      mockMemoriesState = mockMemoriesState.filter((m) => m.id !== id);
+      return;
+    }
+    await this.request<void>(`/api/memories/${id}`, { method: 'DELETE' });
+  }
+
   // Reset demo state
   public resetMockData(): void {
     mockBriefState = JSON.parse(JSON.stringify(rawBrief));
+    mockMemoriesState = [...defaultInitialMemories];
   }
 }
 

@@ -9,12 +9,15 @@ import {
   ChevronRight,
   ShieldCheck,
   Database,
+  Building2,
+  CreditCard,
 } from 'lucide-react';
 import type { Finding, LeakType } from '../types';
 
 interface FindingCardProps {
   finding: Finding;
   onInspect: (finding: Finding) => void;
+  onOpenEntity?: (entityId: string) => void;
 }
 
 const getLeakMeta = (type: LeakType) => {
@@ -58,8 +61,9 @@ const getLeakMeta = (type: LeakType) => {
   }
 };
 
-export const FindingCard: React.FC<FindingCardProps> = ({ finding, onInspect }) => {
+export const FindingCard: React.FC<FindingCardProps> = ({ finding, onInspect, onOpenEntity }) => {
   const meta = getLeakMeta(finding.type);
+  const entityId = finding.client_id || finding.subscription_id;
 
   return (
     <div
@@ -74,6 +78,23 @@ export const FindingCard: React.FC<FindingCardProps> = ({ finding, onInspect }) 
             {meta.label}
           </span>
           <div className="flex items-center gap-2">
+            {entityId && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onOpenEntity?.(entityId);
+                }}
+                className="inline-flex items-center gap-1 text-[11px] font-mono px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-emerald-400 border border-slate-700 transition-colors cursor-pointer"
+                title="View Entity 360 Context"
+              >
+                {finding.client_id ? (
+                  <Building2 className="w-3 h-3 text-emerald-400" />
+                ) : (
+                  <CreditCard className="w-3 h-3 text-purple-400" />
+                )}
+                <span>{entityId}</span>
+              </button>
+            )}
             <span
               className={`text-[11px] px-2 py-0.5 rounded font-mono font-medium ${
                 finding.confidence === 'high'

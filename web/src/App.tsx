@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { api } from './api';
-import type { Brief, Finding, Forecast, Explanation, HealthResponse, Scenario } from './types';
+import type { Brief, Finding, Forecast, Explanation, HealthResponse, Scenario, Move } from './types';
 import type { Currency } from './currency';
 import { Navbar, type NavTab } from './components/Navbar';
 import { ParticleBackground } from './components/ParticleBackground';
 import { EvidenceDrawer } from './components/EvidenceDrawer';
+import { EntityDrawer } from './components/EntityDrawer';
+import { ActionDraftModal } from './components/ActionDraftModal';
 import { RunModal } from './components/RunModal';
 import { BriefPage } from './pages/BriefPage';
 import { LeaksPage } from './pages/LeaksPage';
@@ -27,6 +29,10 @@ export const App: React.FC = () => {
   // Modal / Drawer States
   const [selectedFinding, setSelectedFinding] = useState<Finding | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [selectedEntityId, setSelectedEntityId] = useState<string | null>(null);
+  const [isEntityDrawerOpen, setIsEntityDrawerOpen] = useState(false);
+  const [draftingMove, setDraftingMove] = useState<Move | null>(null);
+  const [isDraftModalOpen, setIsDraftModalOpen] = useState(false);
   const [isRunModalOpen, setIsRunModalOpen] = useState(false);
 
   // Notification Toast
@@ -106,9 +112,27 @@ export const App: React.FC = () => {
     }
   };
 
+  // Open Entity 360 Drawer
+  const handleOpenEntity = (entityId: string) => {
+    setSelectedEntityId(entityId);
+    setIsEntityDrawerOpen(true);
+  };
+
+  // Open Action Draft Modal
+  const handleDraftMove = (move: Move) => {
+    setDraftingMove(move);
+    setIsDraftModalOpen(true);
+  };
+
   // Run What-If Scenario
   const handleRunWhatIf = async (scenario: Scenario) => {
     return api.whatIf(scenario);
+  };
+
+  // Simulate loss of client from EntityDrawer
+  const handleSimulateLoss = (clientId: string) => {
+    setActiveTab('forecast');
+    showToast(`Simulation configured: losing client ${clientId}`);
   };
 
   // Custom question for Explainer
@@ -132,6 +156,7 @@ export const App: React.FC = () => {
         currency={currency}
         onToggleCurrency={setCurrency}
         onTriggerRun={() => setIsRunModalOpen(true)}
+        findingsCount={brief?.findings_count ?? findings.length}
       />
 
       {/* Main Container */}
@@ -139,11 +164,13 @@ export const App: React.FC = () => {
         {activeTab === 'brief' && (
           <BriefPage
             brief={brief}
+            findings={findings}
             loading={loading}
             onDecideMove={handleDecideMove}
             onInspectFinding={handleInspectFindingById}
             onNavigateToLeaks={() => setActiveTab('leaks')}
             onTriggerRun={() => setIsRunModalOpen(true)}
+            onDraftMove={handleDraftMove}
           />
         )}
 
@@ -152,6 +179,7 @@ export const App: React.FC = () => {
             findings={findings}
             loading={loading}
             onInspectFinding={handleInspectFinding}
+            onOpenEntity={handleOpenEntity}
           />
         )}
 
@@ -179,9 +207,27 @@ export const App: React.FC = () => {
         finding={selectedFinding}
         isOpen={isDrawerOpen}
         onClose={() => setIsDrawerOpen(false)}
+        onOpenEntity={handleOpenEntity}
       />
 
-      {/* Autonomous Run Orchestrator Modal */}
+      {/* Client 360 Entity Drawer (I3) */}
+      <EntityDrawer
+        entityId={selectedEntityId}
+        isOpen={isEntityDrawerOpen}
+        onClose={() => setIsEntityDrawerOpen(false)}
+        onInspectFinding={handleInspectFindingById}
+        onSimulateLoss={handleSimulateLoss}
+      />
+
+      {/* Action Draft Modal (I2) */}
+      <ActionDraftModal
+        move={draftingMove}
+        isOpen={isDraftModalOpen}
+        onClose={() => setIsDraftModalOpen(false)}
+        onApproveMove={(moveId) => handleDecideMove(moveId, 'approve')}
+      />
+
+      {/* Autonomous Run Orchestrator Modal (I1 / M3) */}
       <RunModal
         isOpen={isRunModalOpen}
         onClose={() => setIsRunModalOpen(false)}

@@ -7,6 +7,7 @@ import { leakHunter } from './leakHunter.ts';
 import { explainer } from './explainer.ts';
 import { forecaster } from './forecaster.ts';
 import { cfo } from './cfo.ts';
+import { drafter } from './drafter.ts';
 import { createEngines, type Engines } from '../engines/index.ts';
 import { deleteMemory, listMemories, recordDecision } from '../engines/hmemAdapter.ts';
 import { getEntity360, ingestZetarisData } from '../engines/worldModelAdapter.ts';
@@ -15,7 +16,7 @@ import { describeChanges, diffRuns, type RunDiff } from './changes.ts';
 
 export interface RunChanges extends RunDiff { previous_run_id: string | null }
 import type {
-  AgentContext, Brief, Entity360, Explanation, Finding, Forecast, Llm, Memory, Move, RunStatus, RunStep, Scenario,
+  ActionDraft, AgentContext, Brief, Entity360, Explanation, Finding, Forecast, Llm, Memory, Move, RunStatus, RunStep, Scenario,
 } from './types.ts';
 
 export interface Agents { leakHunter: typeof leakHunter; explainer: typeof explainer; forecaster: typeof forecaster; cfo: typeof cfo }
@@ -127,6 +128,32 @@ export function createOrchestrator(deps: OrchestratorDeps) {
         }
         return findings;
       });
+
+      // G2: Branch on confidence - findings with confidence !== 'high' escalated to Explainer before CFO ranks them
+      const lowConfFindings = findings.filter(f => f.confidence !== 'high');
+      if (lowConfFindings.length > 0) {
+        tracer.log('explainer', 'escalated', {
+          finding_ids: lowConfFindings.map(f => f.id),
+          reason: 'low_confidence',
+        });
+        for (const f of lowConfFindings) {
+          try {
+            const check = await runAgent(status.run_id, 'explainer', ctx =>
+              agents.explainer(ctx, {
+                question: `Is finding ${f.id} (${f.title}) supported by its evidence?`,
+                finding_id: f.id,
+                findings,
+              })
+            );
+            if (check.uncertain) {
+              f.title = `${f.title} (unconfirmed: ${check.uncertainty_note ?? 'insufficient evidence'})`;
+            }
+          } catch {
+            // non-blocking
+          }
+        }
+      }
+
       const explanation = await step('explainer', ctx => agents.explainer(ctx, { question: DEFAULT_QUESTION, finding_id: null, findings }));
       const forecast = await step('forecaster', ctx => agents.forecaster(ctx, { type: 'baseline' }));
       const brief = await step('cfo', ctx => agents.cfo(ctx, { findings, forecast, explanation }));
@@ -209,6 +236,12 @@ export function createOrchestrator(deps: OrchestratorDeps) {
         recordDecision(engines.hmem, move, decision, note);
       }
       return { ...move };
+    },
+    async draft(moveId: string): Promise<ActionDraft> {
+      const { brief, findings } = latest();
+      const move = brief.moves.find(m => m.id === moveId);
+      if (!move) throw new NotFoundError(`move ${moveId} not found`);
+      return runAgent(brief.run_id, 'cfo', ctx => drafter({ move, findings, ctx }));
     },
     memories(): Memory[] {
       return engines?.hmem ? listMemories(engines.hmem) : [];

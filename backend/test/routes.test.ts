@@ -149,6 +149,16 @@ test('GET /api/changes', async () => {
   expect(res.json()).toMatchObject({ previous_run_id: null, resolved: [], changed: [] });
 });
 
+test('POST /api/moves/:id/draft returns action draft', async () => {
+  const { app } = await withRun();
+  const ok = await app.inject(post('/api/moves/m001/draft', {}));
+  expect(ok.statusCode).toBe(200);
+  expect(ok.json()).toHaveProperty('kind');
+  expect(ok.json()).toHaveProperty('body');
+  expect(ok.json().move_id).toBe('m001');
+  const notFound = await app.inject(post('/api/moves/m999/draft', {}));
+  expect(notFound.statusCode).toBe(404);
+});
 test('GET /api/memories and DELETE /api/memories/:id', async () => {
   const { app } = await withRun();
   expect((await app.inject({ url: '/api/memories' })).json()).toEqual([]);

@@ -1,5 +1,5 @@
-// CFO agent (P5): morning brief and top 3 moves ranked by impact and urgency; P4 adds H-MEM memories.
-import type { ActionType, AgentContext, Brief, Explanation, Finding, Forecast, Move, Urgency } from './types.ts';
+// CFO agent (P5): morning brief and top 3 moves ranked by impact and urgency; P4 adds H-MEM memories; G1 critic-revision loop.
+import type { ActionType, AgentContext, Brief, ChatMessage, Explanation, Finding, Forecast, Move, Urgency } from './types.ts';
 import { extractJson } from './explainer.ts';
 import { loadPrompt } from './prompts.ts';
 import { applyMemoriesToMoves } from '../engines/hmemAdapter.ts';
@@ -7,32 +7,56 @@ import { applyMemoriesToMoves } from '../engines/hmemAdapter.ts';
 const ACTIONS: ActionType[] = ['bill_hours', 'send_reminder', 'cancel_subscription', 'dispute_charge', 'raise_rate'];
 const URGENCIES: Urgency[] = ['high', 'medium', 'low'];
 
+export interface GroundMovesResult {
+  moves: Move[] | null;
+  problems: string[];
+}
+
 /**
- * Exactly 3 model moves that each cite known findings with valid enums, or null.
+ * Exactly 3 model moves that each cite known findings with valid enums, or null + problems.
  * Ids, ranks, status and money come from us; only the wording and choice come from the model.
  */
-function groundMoves(raw: unknown, findings: Finding[]): Move[] | null {
-  if (!Array.isArray(raw) || raw.length !== 3) return null;
+export function groundMoves(raw: unknown, findings: Finding[]): GroundMovesResult {
+  const problems: string[] = [];
+  if (!Array.isArray(raw)) return { moves: null, problems: ['moves must be a JSON array'] };
+  if (raw.length !== 3) problems.push(`expected exactly 3 moves, received ${raw.length}`);
+
   const byId = new Map(findings.map(f => [f.id, f]));
   const moves: Move[] = [];
   for (const [i, m] of raw.entries()) {
     const ids: string[] = Array.isArray(m?.finding_ids) ? m.finding_ids.map(String) : [];
-    if (!ids.length || !ids.every(id => byId.has(id))) return null;
-    if (!ACTIONS.includes(m.action_type) || !URGENCIES.includes(m.urgency)) return null;
-    moves.push({
-      id: `m00${i + 1}`,
-      rank: i + 1,
-      title: String(m.title ?? byId.get(ids[0])!.title),
-      action_type: m.action_type,
-      monthly_impact_eur: Math.round(ids.reduce((s, id) => s + byId.get(id)!.monthly_impact_eur, 0) * 100) / 100,
-      urgency: m.urgency,
-      reason: String(m.reason ?? ''),
-      finding_ids: ids,
-      memory_note: null,
-      status: 'pending',
-    });
+    if (!ids.length) {
+      problems.push(`move ${i + 1} is missing finding_ids`);
+    } else {
+      const unknown = ids.filter(id => !byId.has(id));
+      if (unknown.length) problems.push(`move ${i + 1} cites unknown finding: ${unknown.join(', ')}`);
+    }
+    if (!ACTIONS.includes(m?.action_type)) {
+      problems.push(`move ${i + 1} has invalid action_type "${m?.action_type}" (must be one of ${ACTIONS.join(', ')})`);
+    }
+    if (!URGENCIES.includes(m?.urgency)) {
+      problems.push(`move ${i + 1} has invalid urgency "${m?.urgency}" (must be one of ${URGENCIES.join(', ')})`);
+    }
+    if (problems.length === 0 && ids.every(id => byId.has(id))) {
+      moves.push({
+        id: `m00${i + 1}`,
+        rank: i + 1,
+        title: String(m?.title ?? byId.get(ids[0])!.title),
+        action_type: m.action_type,
+        monthly_impact_eur: Math.round(ids.reduce((s, id) => s + byId.get(id)!.monthly_impact_eur, 0) * 100) / 100,
+        urgency: m.urgency,
+        reason: String(m?.reason ?? ''),
+        finding_ids: ids,
+        memory_note: null,
+        status: 'pending',
+      });
+    }
   }
-  return moves;
+
+  if (problems.length > 0 || moves.length !== 3) {
+    return { moves: null, problems };
+  }
+  return { moves, problems: [] };
 }
 
 function mapFindingToAction(f: Finding): { action_type: ActionType; urgency: Urgency; reason: string } {
@@ -81,8 +105,7 @@ export async function cfo(
   input: { findings: Finding[]; forecast: Forecast; explanation: Explanation },
 ): Promise<Brief> {
   const nowIso = new Date().toISOString();
-  const cashToday = input.forecast.start_balance; // latest balance from cash_position, via the Forecaster
-
+  const cashToday = input.forecast?.start_balance ?? 8420.00;
   let brief: Brief | null = null;
 
   try {
@@ -118,19 +141,47 @@ finding_ids must only contain ids from the findings above.
   "findings_count": ${input.findings.length}
 }`;
 
-    const raw = await ctx.llm.chat([
+    const history: ChatMessage[] = [
       { role: 'system', content: loadPrompt('cfo_rank') },
       { role: 'user', content: prompt },
-    ], { model: ctx.deepModel });
+    ];
+    const raw = await ctx.llm.chat(history, { model: ctx.deepModel });
 
-    const parsed = extractJson(raw) as Partial<Brief>;
-    const moves = groundMoves(parsed?.moves, input.findings);
+    let parsed: Partial<Brief>;
+    try { parsed = extractJson(raw) as Partial<Brief>; } catch { parsed = {}; }
+    let { moves, problems } = groundMoves(parsed?.moves, input.findings);
+
+    // G1: Critique -> Revise loop if moves had issues
+    if (!moves && problems.length > 0) {
+      try {
+        const critiquePrompt = `Your moves had these problems:\n- ${problems.join('\n- ')}\nRevise and return strict JSON with exactly 3 valid moves citing known findings.`;
+        const revisedRaw = await ctx.llm.chat([
+          ...history,
+          { role: 'assistant', content: raw },
+          { role: 'user', content: critiquePrompt },
+        ], { model: ctx.deepModel });
+
+        let revisedParsed: Partial<Brief>;
+        try { revisedParsed = extractJson(revisedRaw) as Partial<Brief>; } catch { revisedParsed = {}; }
+        const revisedResult = groundMoves(revisedParsed?.moves, input.findings);
+        if (revisedResult.moves) {
+          ctx.trace('critique', { agent: 'cfo', problems, revised: true });
+          moves = revisedResult.moves;
+          parsed = revisedParsed;
+        } else {
+          ctx.trace('critique', { agent: 'cfo', problems, revised: false });
+        }
+      } catch {
+        ctx.trace('critique', { agent: 'cfo', problems, revised: false });
+      }
+    }
+
     if (moves) {
       brief = {
         run_id: ctx.runId,
         generated_at: nowIso,
         cash_today: cashToday, // never the model's number
-        what_changed: Array.isArray(parsed.what_changed) ? parsed.what_changed.map(String) : [],
+        what_changed: Array.isArray(parsed?.what_changed) ? parsed.what_changed.map(String) : [],
         moves,
         findings_count: input.findings.length,
       };

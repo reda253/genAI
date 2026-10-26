@@ -4,7 +4,9 @@ import { readFileSync } from 'node:fs';
 const DIR = new URL('../../../prompts/', import.meta.url);
 const cache = new Map<string, string>();
 
-export function loadPrompt(name: 'leak_hunter' | 'explainer' | 'cfo_rank'): string {
+export type PromptName = 'leak_hunter' | 'explainer' | 'cfo_rank' | 'action_draft';
+
+export function loadPrompt(name: PromptName): string {
   let text = cache.get(name);
   if (text === undefined) {
     text = readFileSync(new URL(`${name}.md`, DIR), 'utf8');

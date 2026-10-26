@@ -61,4 +61,41 @@ describe('cfo agent', () => {
     brief.moves.forEach(m => m.finding_ids.forEach(id => expect(ids.has(id)).toBe(true)));
     expect(brief.moves.some(m => m.title === 'Act on f002')).toBe(false); // whole model answer discarded
   });
+
+  it('G1: critiques model moves citing unknown finding, accepts valid revised moves', async () => {
+    const replies = [
+      llmBrief([move('f002'), move('f999'), move('f004')]), // f999 is unknown
+      llmBrief([move('f002'), move('f001', { action_type: 'send_reminder' }), move('f004')]), // revised valid
+    ];
+    const { llm } = scriptedLlm(() => replies.shift()!);
+    const events: { event: string; data?: any }[] = [];
+    const brief = await cfo(
+      { runId: 'run_cfo', llm, deepModel: 'deep-x', sql: () => Promise.reject(new Error('no')), trace: (event, data) => events.push({ event, data }) },
+      { findings, forecast: baselineForecast, explanation }
+    );
+
+    expect(brief.moves).toHaveLength(3);
+    expect(brief.moves.some(m => m.title === 'Act on f001')).toBe(true);
+    const critique = events.find(e => e.event === 'critique');
+    expect(critique).toBeDefined();
+    expect(critique?.data).toMatchObject({ agent: 'cfo', revised: true });
+  });
+
+  it('G1: critiques invalid moves, falls back to backup ranking when revision also fails', async () => {
+    const replies = [
+      llmBrief([move('f999')]), // bad count and bad id
+      llmBrief([move('f999')]), // still bad
+    ];
+    const { llm } = scriptedLlm(() => replies.shift()!);
+    const events: { event: string; data?: any }[] = [];
+    const brief = await cfo(
+      { runId: 'run_cfo', llm, deepModel: 'deep-x', sql: () => Promise.reject(new Error('no')), trace: (event, data) => events.push({ event, data }) },
+      { findings, forecast: baselineForecast, explanation }
+    );
+
+    expect(brief.moves).toHaveLength(3);
+    const critique = events.find(e => e.event === 'critique');
+    expect(critique).toBeDefined();
+    expect(critique?.data).toMatchObject({ agent: 'cfo', revised: false });
+  });
 });

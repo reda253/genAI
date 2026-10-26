@@ -38,7 +38,7 @@ def api_request(url: str, method: str = "GET", data: dict[str, Any] | None = Non
         return json.loads(resp.read().decode("utf-8"))
 
 
-def run_single_cycle(api_url: str, cycle_num: int, answer_key: list[dict[str, Any]], logs_dir: Path) -> dict[str, Any]:
+def run_single_cycle(api_url: str, cycle_num: int, answer_key: list[dict[str, Any]], logs_dir: Path, timeout: int) -> dict[str, Any]:
     t0 = time.time()
     # 1. Start run
     start_resp = api_request(f"{api_url}/api/runs", method="POST", data={})
@@ -47,7 +47,7 @@ def run_single_cycle(api_url: str, cycle_num: int, answer_key: list[dict[str, An
         raise RuntimeError(f"POST /api/runs did not return run_id: {start_resp}")
 
     # 2. Poll until finished
-    deadline = time.time() + 180  # 3 minutes max per run
+    deadline = time.time() + timeout  # live Nemotron calls range from 10 s to 3 min each
     final_status = "running"
     while time.time() < deadline:
         status_resp = api_request(f"{api_url}/api/runs/{run_id}")
@@ -71,18 +71,18 @@ def run_single_cycle(api_url: str, cycle_num: int, answer_key: list[dict[str, An
     moves = brief.get("moves", [])
     action_types = [m.get("action_type") for m in moves]
 
-    # 6. Check trace log for llm_failed
-    trace_file = logs_dir / f"{run_id}.jsonl"
-    llm_failed_events = []
-    if trace_file.exists():
-        for line in trace_file.read_text(encoding="utf-8").splitlines():
-            if line.strip():
-                try:
-                    entry = json.loads(line)
-                    if entry.get("event") == "llm_failed":
-                        llm_failed_events.append(entry)
-                except Exception:
-                    pass
+    # 6. Check the trace for llm_failed. Prefer the API: in Docker the logs live in a volume,
+    # and a missing file must not count as "0 failures".
+    try:
+        trace = api_request(f"{api_url}/api/runs/{run_id}/trace")
+    except Exception:
+        trace_file = logs_dir / f"{run_id}.jsonl"
+        if not trace_file.exists():
+            raise RuntimeError(f"No trace for {run_id}: API trace failed and {trace_file} is missing")
+        trace = [json.loads(line) for line in trace_file.read_text(encoding="utf-8").splitlines() if line.strip()]
+    llm_failed_events = [entry for entry in trace if entry.get("event") == "llm_failed"]
+    llm_calls = sum(1 for entry in trace if entry.get("event") == "llm_call")
+    critiques = sum(1 for entry in trace if entry.get("event") == "critique")
 
     return {
         "cycle": cycle_num,
@@ -94,6 +94,8 @@ def run_single_cycle(api_url: str, cycle_num: int, answer_key: list[dict[str, An
         "false_alarms": len(eval_res.false_alarms),
         "action_types": action_types,
         "llm_failed_count": len(llm_failed_events),
+        "llm_calls": llm_calls,
+        "critiques": critiques,
     }
 
 
@@ -103,6 +105,7 @@ def main() -> int:
     parser.add_argument("--api-url", default=DEFAULT_API_URL, help=f"Base API URL (default: {DEFAULT_API_URL})")
     parser.add_argument("--answer-key", default=DEFAULT_ANSWER_KEY, help="Path to answer_key.json")
     parser.add_argument("--logs-dir", default=DEFAULT_LOGS_DIR, help="Path to logs directory")
+    parser.add_argument("--timeout", type=int, default=600, help="Seconds to wait for one run (default: 600)")
     args = parser.parse_args()
 
     api_url = args.api_url.rstrip("/")
@@ -131,9 +134,9 @@ def main() -> int:
     for cycle in range(1, args.runs + 1):
         print(f"Cycle {cycle}/{args.runs} starting...", end=" ", flush=True)
         try:
-            res = run_single_cycle(api_url, cycle, answer_key, logs_dir)
+            res = run_single_cycle(api_url, cycle, answer_key, logs_dir, args.timeout)
             results.append(res)
-            print(f"DONE in {res['duration_sec']}s | Leaks: {res['found_count']}/{res['total_count']} (false alarms: {res['false_alarms']}) | Actions: {res['action_types']}")
+            print(f"DONE in {res['duration_sec']}s | Leaks: {res['found_count']}/{res['total_count']} (false alarms: {res['false_alarms']}) | Actions: {res['action_types']} | model calls: {res['llm_calls']}, llm_failed: {res['llm_failed_count']}, critic: {res['critiques']}")
 
             if baseline_actions is None:
                 baseline_actions = res["action_types"]

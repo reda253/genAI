@@ -134,6 +134,10 @@
     "numbers": {
       "script": "evals/check_numbers.py"
     },
+    "stability": {
+      "script": "evals/stability.py",
+      "result": "5/5 live runs (Nemotron via Nightshift, mock Zetaris views), 26 Oct 2026: 6/6 found and 0 false alarms each time, same 3 action types, 0 llm_failed, 129-197 s per run"
+    },
     "answer_key": "data/answer_key.json"
   },
   "run_history": {

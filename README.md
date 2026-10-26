@@ -14,7 +14,7 @@ Ledger Lens is an AI finance team that finds those leaks for her. Four agents re
 | **CFO** | Picks three moves with EUR amounts (Nemotron Ultra). H-MEM remembers what Sara approved or rejected and adjusts the ranking, with a visible `memory_note` (the "memory moment"). |
 | **Dashboard** | Brief, findings with evidence, forecast and what-ifs, approve / reject. Status dots show whether Zetaris and Nightshift are live. |
 | **Traces** | Every run writes `logs/<run_id>.jsonl`: each agent step and model call. |
-| **Evals** | `evals/check_findings.py` compares the findings with the answer key: **6/6 found, 0 false alarms**. 163 backend tests pass. |
+| **Evals** | `evals/check_findings.py` compares the findings with the answer key: **6/6 found, 0 false alarms**. `evals/stability.py` repeats live runs: **5/5 stable** (same findings and moves, 0 failed model calls). 164 backend tests pass. |
 
 **Known limits**
 

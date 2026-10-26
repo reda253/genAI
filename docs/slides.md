@@ -101,8 +101,9 @@ Leak Hunter ──► Explainer ──► Forecaster ──► CFO
 - **Forecaster:** deterministic math in code, not a model.
 - **CFO:** deep model ranks three moves; H-MEM changes the ranking from past
   decisions.
-- **Critic loop `[confirm P5]`:** reject a model answer that invents a number;
-  retry once, then use the deterministic fallback.
+- **Critic loop:** an answer that cites an amount not in the evidence goes
+  back to Nemotron once, with the allowed amounts; if it is still wrong, the
+  deterministic fallback is used. Seen live as a `critique` trace line.
 
 **Speaker notes (25s)**
 
@@ -139,7 +140,7 @@ FX rates (public REST)┘              client_profitability
 - The demo can run from committed view fixtures (`ZETARIS_MOCK=1`) or live
   Zetaris (`ZETARIS_MOCK=0`).
 
-`[P2: add a Zetaris UI screenshot of the four views here]`
+![Zetaris view query](screenshots/zetaris-view.png)
 
 **Speaker notes (20s)**
 
@@ -163,7 +164,7 @@ FX rates (public REST)┘              client_profitability
 | **Nemotron 3.5 Lightning** | Fast lane: ranks and describes findings | Leak Hunter |
 | **Nemotron 3 Ultra** | Deep lane: explanations and CFO moves | Explainer, CFO |
 | **Markovian** | Bounded step-by-step investigation, evidence carried forward | Explainer |
-| **World Model** `[confirm P4]` | Shared entity state; the current run ingests findings, entity rows are the next step | Agents |
+| **World Model** | Each run ingests the findings and the full view rows (79 entities); powers the Client 360 drawer | Agents, UI |
 | **H-MEM** | Remembers approve/reject decisions and changes ranking | CFO |
 
 **Build:** TypeScript + Fastify · React + Vite + Tailwind · Postgres 16 · Docker · Zetaris · Meterless Nightshift
@@ -192,7 +193,7 @@ FX rates (public REST)┘              client_profitability
 
 ### Four screens that tell the story
 
-`[P6: replace with 1920×1080 screenshots]`
+Screenshots: `screenshots/brief.png`, `leaks-evidence.png`, `forecast-whatif.png`, `timeline.png`; draft modal: `draft-modal.png`.
 
 1. **Brief** — money headline, what changed, three ranked moves
 2. **Leaks + evidence** — finding cards and the SQL/rows behind each one
@@ -223,7 +224,8 @@ FX rates (public REST)┘              client_profitability
 | Planted leaks found | **6/6** |
 | False alarms | **0** |
 | Data sanity checks | **1,256 passed** |
-| Backend tests | **128 passed** `[P1: refresh at freeze]` |
+| Backend tests | **165 passed** |
+| Stability (live runs) | **5/5** |
 | Monthly leaks | **€1,918** |
 | Cash at risk | **€4,800** |
 | Closing cash | **€8,420** |
@@ -297,10 +299,10 @@ FX rates (public REST)┘              client_profitability
 
 ## Review checklist
 
-- [ ] P5 confirms slides 4 and 6: critic-loop status, model lanes, engine names.
+- [x] P5 confirms slides 4 and 6: critic-loop status, model lanes, engine names.
 - [ ] P2 confirms slide 5: source names, view names, setup command.
-- [ ] P6 supplies the four screenshots and, if available, the draft modal.
-- [ ] P1 refreshes the backend-test count at freeze.
+- [x] P6 supplies the four screenshots and, if available, the draft modal.
+- [x] P1 refreshes the backend-test count at freeze.
 - [ ] Every number matches `data/answer_key.json` / `data/out/summary.json`.
 - [ ] No slide claims an unmerged feature is live.
 - [ ] The deck and the video use the same story: brief → leak → evidence → why

@@ -33,13 +33,21 @@ From live runs with Nemotron through Nightshift, 26 Oct 2026.
 
 ![Leaks](docs/screenshots/leaks.png)
 
-**Evidence:** every finding opens the exact SQL it ran on a Zetaris view and the rows it returned.
+**Evidence:** every finding opens the exact SQL it ran on a Zetaris view and the rows it returned. The `360 Profile` chip opens the client's World Model profile.
 
 ![Evidence drawer for the Nordwind late payer](docs/screenshots/leaks-evidence.png)
 
 **Forecast and what-if:** six months of cash computed in code; here, losing Nordwind Studio costs €7,200 over six months.
 
 ![Forecast with the lose-a-client what-if](docs/screenshots/forecast-whatif.png)
+
+**Run timeline:** each agent step as it happens, with the Nemotron model and time of every call, the Markovian and World Model engines, and the critic and H-MEM lines.
+
+![Run timeline with Nemotron model calls](docs/screenshots/timeline.png)
+
+**Action draft:** a move becomes a draft email, checklist or invoice lines, using only numbers from the evidence. Never sent automatically.
+
+![Draft reminder email for Nordwind Studio](docs/screenshots/draft-modal.png)
 
 **Zetaris:** the `ledger_lens_pg` source with its five tables, and the `client_profitability` view returning Atlas Co's unbilled hours.
 
@@ -189,13 +197,13 @@ Every variable in [.env.example](.env.example). All are optional for Level 1.
   Test evidence: [docs/engine-tests.md](docs/engine-tests.md).
 - **NVIDIA Nemotron:** Nemotron 3.5 Lightning ranks the leaks; Nemotron 3 Ultra writes the explanations and the CFO moves.
 
-Submission details: [metadata.json](metadata.json).
+Full sponsor write-up (Zetaris, Nightshift, each engine, Nemotron, pre-existing components): [docs/sponsor-tech.md](docs/sponsor-tech.md). Slide deck: [docs/slides/ledger-lens-deck.pdf](docs/slides/ledger-lens-deck.pdf). Submission details: [metadata.json](metadata.json).
 
 ## How the agents reason
 
 Ledger Lens guarantees financial truthfulness through a multi-tier reasoning pipeline:
 
-1. **Deterministic SQL Detection:** Fixed SQL queries over the 4 Zetaris views (client_profitability, cash_position, subscription_usage, r_aging) detect anomalies (unbilled hours, price rises > 15%, inactive subscriptions > 60 days, overdue invoices > 30 days, underpriced services, duplicate charges). Every claim carries verifiable evidence rows.
+1. **Deterministic SQL Detection:** Fixed SQL queries over the 4 Zetaris views (client_profitability, cash_position, subscription_usage, ar_aging) detect anomalies (unbilled hours, price rises > 15%, inactive subscriptions > 60 days, overdue invoices > 30 days, underpriced services, duplicate charges). Every claim carries verifiable evidence rows.
 2. **NVIDIA Nemotron Dual Lanes:**
    - **Fast Lane (`nvidia/nemotron-3.5-lightning-30b-a3b`):** Leak Hunter scans and ranks anomalies into structured, typed findings with low latency.
    - **Deep Lane (`nvidia/nemotron-3-ultra-550b-a55b`):** Powers Explainer (bounded Markovian multi-chunk reasoning) and CFO (strategic multi-move ranking) for deep causal thinking.

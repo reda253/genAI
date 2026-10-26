@@ -294,8 +294,7 @@
 
       <div class="critic-callout">
         <span class="critic-badge">Critic loop</span>
-        <p>Reject a model answer that invents a number; retry once, then use the deterministic fallback.</p>
-        <span class="confirm">[confirm P5]</span>
+        <p>An answer that cites an amount not in the evidence goes back to Nemotron once, with the allowed amounts; if it is still wrong, the deterministic fallback is used. Seen live as a <code>critique</code> line in the trace.</p>
       </div>
 
       <div class="footer-line">
@@ -361,9 +360,8 @@
         <div class="fact"><b>Modes</b><span><code>ZETARIS_MOCK=1</code> fixtures · <code>0</code> live</span></div>
       </div>
 
-      <div class="screenshot-slot tall">
-        [P2] Zetaris UI screenshot · four views · drop a 16:9 or wider image here
-      </div>
+      <img class="shot tall" src="../screenshots/zetaris-view.png"
+        alt="Zetaris SQL Workspace running client_profitability for Atlas Co: 12 and 10 unbilled hours" />
 
       <div class="footer-line">
         <span>Source: zetaris/README.md · docs/architecture.md · data/README.md §12</span>
@@ -426,9 +424,9 @@
           </div>
           <div class="engine-card wide">
             <div class="engine-kicker"><span>Shared state</span><span>Agents</span></div>
-            <h3>World Model <span class="confirm">[confirm P4]</span></h3>
-            <p>Current run ingests findings; entity rows are the next step.</p>
-            <span class="engine-foot">now: findings · next: clients, vendors, invoices</span>
+            <h3>World Model</h3>
+            <p>Each run ingests the findings and the full view rows; it powers the Client 360 drawer.</p>
+            <span class="engine-foot">79 entities · clients, subscriptions, invoices</span>
           </div>
         </div>
       </div>
@@ -444,7 +442,7 @@
 
       <div class="trace-strip">
         <span class="trace-label">Trace</span>
-        <span>run_20261025_133016</span>
+        <span>run_20261026_181940</span>
         <span class="arrow">→</span>
         <span>leak_hunter</span>
         <span class="arrow">→</span>
@@ -453,7 +451,7 @@
         <span>forecaster</span>
         <span class="arrow">→</span>
         <span>cfo</span>
-        <span class="trace-meta">6 findings · 3 moves · 1 run</span>
+        <span class="trace-meta">6 findings · 3 moves · live Zetaris + Nemotron</span>
       </div>
 
       <div class="footer-line">
@@ -481,66 +479,28 @@
 
       <div class="screen-grid">
         <div class="screen-card">
-          <div class="wireframe" aria-label="Brief screen wireframe">
-            <div class="wf-top"><span style="width: 42px"></span><span class="wf-pill"></span></div>
-            <div class="wf-title"></div>
-            <div class="wf-number"></div>
-            <div class="wf-cols">
-              <div class="wf-block tall"></div>
-              <div class="wf-block tall"></div>
-              <div class="wf-block tall"></div>
-            </div>
-          </div>
+          <img class="screen-shot" src="../screenshots/brief.png" alt="Morning brief: money headline, what changed, three ranked moves" />
           <div class="screen-caption"><b>Brief</b><span>01 · money headline + moves</span></div>
         </div>
 
         <div class="screen-card">
-          <div class="wireframe" aria-label="Leaks and evidence screen wireframe">
-            <div class="wf-top"><span style="width: 52px"></span><span class="wf-pill"></span></div>
-            <div class="wf-title"></div>
-            <div class="wf-row"><span class="wf-dot"></span><span class="wf-line"></span><span class="wf-badge"></span></div>
-            <div class="wf-row"><span class="wf-dot"></span><span class="wf-line"></span><span class="wf-badge"></span></div>
-            <div class="wf-row"><span class="wf-dot"></span><span class="wf-line"></span><span class="wf-badge"></span></div>
-            <div class="wf-row"><span class="wf-dot"></span><span class="wf-line"></span><span class="wf-badge"></span></div>
-          </div>
+          <img class="screen-shot" src="../screenshots/leaks-evidence.png" alt="Evidence drawer: the SQL and rows behind the Nordwind finding" />
           <div class="screen-caption"><b>Leaks + evidence</b><span>02 · SQL + rows</span></div>
         </div>
 
         <div class="screen-card">
-          <div class="wireframe" aria-label="Forecast screen wireframe">
-            <div class="wf-top"><span style="width: 38px"></span><span class="wf-pill"></span></div>
-            <div class="wf-title"></div>
-            <div class="wf-chart">
-              <svg viewBox="0 0 100 40" preserveAspectRatio="none" aria-hidden="true">
-                <path d="M0,30 C12,28 18,22 28,24 C40,26 46,15 58,17 C70,19 76,9 88,11 L100,7" fill="none" stroke="#34d399" stroke-width="1.6" vector-effect="non-scaling-stroke" />
-                <path d="M0,34 C14,33 20,30 30,31 C42,32 50,26 60,28 C72,30 80,23 90,24 L100,22" fill="none" stroke="#64748b" stroke-width="1.1" stroke-dasharray="3 2" vector-effect="non-scaling-stroke" />
-              </svg>
-            </div>
-            <div class="wf-pills"><span></span><span></span><span></span></div>
-          </div>
+          <img class="screen-shot" src="../screenshots/forecast-whatif.png" alt="Forecast: losing Nordwind Studio costs 7,200 EUR over six months" />
           <div class="screen-caption"><b>Forecast</b><span>03 · six-month + what-ifs</span></div>
         </div>
 
         <div class="screen-card">
-          <div class="wireframe" aria-label="Why and timeline screen wireframe">
-            <div class="wf-top"><span style="width: 46px"></span><span class="wf-pill"></span></div>
-            <div class="wf-title"></div>
-            <div class="wf-steps">
-              <div class="wf-step"><span class="node"></span><span class="bar"></span></div>
-              <div class="wf-step"><span class="node"></span><span class="bar"></span></div>
-              <div class="wf-step"><span class="node"></span><span class="bar"></span></div>
-              <div class="wf-step"><span class="node"></span></div>
-            </div>
-            <div class="wf-row"><span class="wf-dot"></span><span class="wf-line"></span><span class="wf-badge"></span></div>
-            <div class="wf-row"><span class="wf-dot"></span><span class="wf-line"></span><span class="wf-badge"></span></div>
-            <div class="wf-row"><span class="wf-dot"></span><span class="wf-line"></span><span class="wf-badge"></span></div>
-          </div>
+          <img class="screen-shot" src="../screenshots/timeline.png" alt="Run timeline: each agent step with its Nemotron model and time" />
           <div class="screen-caption"><b>Why? / timeline</b><span>04 · cited causes + trace</span></div>
         </div>
       </div>
 
       <div class="placeholder-note">
-        [P6] Replace wireframes with 1920×1080 screenshots · optional 5th: draft modal “Never sent automatically”
+        Live run · 26 Oct 2026 · drafts open in a modal marked “Never sent automatically”
       </div>
 
       <div class="footer-line">
@@ -569,7 +529,7 @@
         <div class="proof-stat"><b class="emerald">6/6</b><span>Planted leaks found</span></div>
         <div class="proof-stat"><b>0</b><span>False alarms</span></div>
         <div class="proof-stat"><b>1,256</b><span>Data sanity checks</span></div>
-        <div class="proof-stat"><b>128</b><span>Backend tests · [P1 refresh]</span></div>
+        <div class="proof-stat"><b>165</b><span>Backend tests</span></div>
       </div>
 
       <div class="money-strip">
@@ -581,10 +541,10 @@
       <div class="terminal" aria-label="Verification commands and results">
         <div><span class="prompt">$</span> python evals/check_findings.py --findings examples/findings.json</div>
         <div class="ok">6/6 found, 0 false alarms</div>
-        <div><span class="prompt">$</span> python data/sanity_checks.py</div>
-        <div class="ok">All 1256 checks passed.</div>
+        <div><span class="prompt">$</span> python evals/stability.py --runs 5</div>
+        <div class="ok">PASS: 5/5 live runs · 6/6 each · 0 llm_failed</div>
         <div><span class="prompt">$</span> cd backend &amp;&amp; npm test</div>
-        <div class="ok">128 passed (128)</div>
+        <div class="ok">165 passed (165)</div>
       </div>
 
       <div class="dataset-line">

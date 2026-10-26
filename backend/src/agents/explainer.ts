@@ -96,7 +96,11 @@ export async function explainer(
       `ungrounded amount: ${n} EUR${demo && n === DEMO_INVENTED_AMOUNT ? ' (injected by DEMO_CRITIC)' : ''}`);
     const trace = (revised: boolean) =>
       ctx.trace('critique', { agent: 'explainer', problems, revised, ...(demo ? { demo_injected: true } : {}) });
-    const critiquePrompt = `These amounts are not in the evidence rows: ${ungrounded.join(', ')} EUR. Revise using only the evidence. Return strict JSON matching the Explanation schema.`;
+    // name the amounts each finding can justify: "use only the evidence" alone was not always enough to fix it
+    const allowed = relevantFindings
+      .map(f => `${f.id}: ${[f.monthly_impact_eur, f.cash_at_risk_eur].filter(n => n > 0).join(' or ')}`)
+      .join('; ');
+    const critiquePrompt = `These amounts are not in the evidence rows: ${ungrounded.join(', ')} EUR. Revise using only the evidence: each cause's amount_eur must be its finding's amount (${allowed}). Return strict JSON matching the Explanation schema: {"summary", "causes": [{"rank", "cause", "amount_eur", "finding_id"}], "uncertain", "uncertainty_note"}.`;
     try {
       const revisedRaw = await ctx.llm.chat([
         ...history,

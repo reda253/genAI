@@ -159,3 +159,51 @@ test('POST /api/moves/:id/draft returns action draft', async () => {
   const notFound = await app.inject(post('/api/moves/m999/draft', {}));
   expect(notFound.statusCode).toBe(404);
 });
+test('GET /api/memories and DELETE /api/memories/:id', async () => {
+  const { app } = await withRun();
+  expect((await app.inject({ url: '/api/memories' })).json()).toEqual([]);
+
+  await app.inject(post('/api/moves/m001/decision', { decision: 'approve' }));
+  const memories = (await app.inject({ url: '/api/memories' })).json();
+  expect(memories).toHaveLength(1);
+  expect(memories[0].decision).toBe('approve');
+
+  const delRes = await app.inject({ method: 'DELETE', url: `/api/memories/${memories[0].id}` });
+  expect(delRes.statusCode).toBe(204);
+  expect((await app.inject({ url: '/api/memories' })).json()).toHaveLength(0);
+
+  const missing = await app.inject({ method: 'DELETE', url: '/api/memories/mem-9999' });
+  expect(missing.statusCode).toBe(404);
+  expect(missing.json().error.code).toBe('not_found');
+});
+
+test('GET /api/entities/:id returns Client/Subscription 360 profile, 404 for unknown id', async () => {
+  const { app } = await withRun();
+
+  // Test client entity
+  const clientRes = await app.inject({ url: '/api/entities/c01' });
+  expect(clientRes.statusCode).toBe(200);
+  const client = clientRes.json();
+  expect(client.id).toBe('c01');
+  expect(client.kind).toBe('client');
+  expect(client.name).toBe('Atlas Co');
+  expect(typeof client.summary).toBe('string');
+  expect(client.facts).toBeDefined();
+  expect(Array.isArray(client.findings)).toBe(true);
+  expect(Array.isArray(client.invoices)).toBe(true);
+
+  // Test subscription entity
+  const subRes = await app.inject({ url: '/api/entities/sub02' });
+  expect(subRes.statusCode).toBe(200);
+  const sub = subRes.json();
+  expect(sub.id).toBe('sub02');
+  expect(sub.kind).toBe('subscription');
+  expect(sub.name).toBe('Adobe');
+  expect(sub.facts.monthly_cost).toBeDefined();
+
+  // Test unknown entity -> 404 not_found
+  const missing = await app.inject({ url: '/api/entities/unknown-999' });
+  expect(missing.statusCode).toBe(404);
+  expect(missing.json().error.code).toBe('not_found');
+});
+

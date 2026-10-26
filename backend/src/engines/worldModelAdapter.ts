@@ -1,7 +1,7 @@
 // World Model adapter for Ledger Lens — ingests Zetaris views and findings,
 // and provides rich context retrieval for agents.
 import type { WorldModel, Entity, Fact } from './world-model/index.ts';
-import type { Finding } from '../agents/types.ts';
+import type { Finding, Entity360 } from '../agents/types.ts';
 
 export interface EntityContextSummary {
   id: string;
@@ -116,6 +116,7 @@ export async function ingestZetarisData(
         externalKey: { system: 'zetaris', id: invId },
         name: `Invoice ${invId}`,
         attrs: {
+          ...row,
           invoice_id: invId,
           client_id: clientId,
           amount: row.amount,
@@ -232,5 +233,126 @@ export function getEntityContext(wm: WorldModel, rawId: string): EntityContextSu
     relatedFindings,
     relatedInvoices,
     contextSummary: summaryParts.join('\n'),
+  };
+}
+
+export function getEntity360(
+  wm: WorldModel,
+  rawId: string,
+  latestFindings: Finding[] = [],
+): Entity360 | null {
+  const cleanId = rawId.trim();
+  const graph = wm.view('graph');
+  const factsView = wm.view('facts');
+
+  let entityId = cleanId;
+  let entity = graph.entity(entityId);
+  if (!entity) {
+    // Try prefix matching
+    for (const prefix of ['client:zetaris:', 'subscription:zetaris:']) {
+      const candidate = graph.entity(`${prefix}${cleanId}`);
+      if (candidate) {
+        entityId = candidate.id;
+        entity = candidate;
+        break;
+      }
+    }
+  }
+
+  if (!entity) return null;
+  if (entity.type !== 'client' && entity.type !== 'subscription') return null;
+
+  const kind = entity.type as 'client' | 'subscription';
+  const baseId = String(
+    entity.attrs.client_id ||
+    entity.attrs.subscription_id ||
+    (cleanId.includes(':') ? cleanId.split(':').pop() : cleanId)
+  );
+  const facts = factsView.about(entityId);
+  const neighbors = graph.neighborsOf(entityId);
+
+  // Collect facts and attrs into Record<string, string | number>
+  const factsRecord: Record<string, string | number> = {};
+  for (const f of facts) {
+    if (typeof f.value === 'string' || typeof f.value === 'number') {
+      factsRecord[f.predicate] = f.value;
+    }
+  }
+  for (const [k, v] of Object.entries(entity.attrs)) {
+    if (k === 'client_id' || k === 'subscription_id' || k === 'client_name' || k === 'vendor') continue;
+    if ((typeof v === 'string' || typeof v === 'number') && factsRecord[k] === undefined) {
+      factsRecord[k] = v;
+    }
+  }
+
+  // Related findings
+  const neighborFindingIds = new Set(
+    neighbors.filter(n => n.type === 'finding').map(n => String(n.attrs.finding_id || n.id.replace(/^finding:agent:/, '')))
+  );
+  const matchedFindings = latestFindings.filter(f => {
+    if (kind === 'client' && f.client_id === baseId) return true;
+    if (kind === 'subscription' && f.subscription_id === baseId) return true;
+    if (neighborFindingIds.has(f.id)) return true;
+    return false;
+  });
+
+  // Synthesize from neighbor finding entities if latestFindings didn't have them
+  const matchedFindingIds = new Set(matchedFindings.map(f => f.id));
+  for (const n of neighbors.filter(x => x.type === 'finding')) {
+    const fid = String(n.attrs.finding_id || n.id.replace(/^finding:agent:/, ''));
+    if (!matchedFindingIds.has(fid)) {
+      matchedFindings.push({
+        id: fid,
+        type: (n.attrs.type as any) || 'unbilled_hours',
+        title: n.name || fid,
+        client_id: kind === 'client' ? baseId : null,
+        subscription_id: kind === 'subscription' ? baseId : null,
+        monthly_impact_eur: Number(n.attrs.monthly_impact_eur || 0),
+        cash_at_risk_eur: Number(n.attrs.cash_at_risk_eur || 0),
+        confidence: (n.attrs.confidence as any) || 'high',
+        evidence: [],
+        detected_at: new Date().toISOString(),
+      });
+      matchedFindingIds.add(fid);
+    }
+  }
+
+  // Related invoices (only relevant for client)
+  const relatedInvoices = neighbors.filter(n => n.type === 'invoice');
+  const invoices = relatedInvoices.map(n => ({ ...n.attrs }));
+
+  // Generate summary
+  let summary = '';
+  if (kind === 'client') {
+    const clientName = entity.name || String(entity.attrs.client_name || baseId);
+    const parts = [clientName];
+    if (entity.attrs.service) parts.push(`(${entity.attrs.service})`);
+    if (factsRecord.hourly_rate !== undefined) parts.push(`billed at €${factsRecord.hourly_rate}/h`);
+    if (factsRecord.market_rate !== undefined) parts.push(`(market: €${factsRecord.market_rate}/h)`);
+    if (factsRecord.unbilled_hours !== undefined) parts.push(`with ${factsRecord.unbilled_hours} unbilled hours`);
+    if (invoices.length > 0) parts.push(`· ${invoices.length} invoice${invoices.length === 1 ? '' : 's'}`);
+    if (matchedFindings.length > 0) parts.push(`· ${matchedFindings.length} leak finding${matchedFindings.length === 1 ? '' : 's'}`);
+    summary = parts.join(' ');
+  } else {
+    const vendor = entity.name || String(entity.attrs.vendor || baseId);
+    const parts = [vendor];
+    if (entity.attrs.plan) parts.push(`(${entity.attrs.plan})`);
+    if (factsRecord.monthly_cost !== undefined) parts.push(`at €${factsRecord.monthly_cost}/month`);
+    if (factsRecord.days_since_login !== undefined) parts.push(`· last login ${factsRecord.days_since_login} days ago`);
+    if (factsRecord.price_change_pct !== undefined && Number(factsRecord.price_change_pct) > 0) {
+      parts.push(`· price increased by ${factsRecord.price_change_pct}%`);
+    }
+    if (matchedFindings.length > 0) parts.push(`· ${matchedFindings.length} leak finding${matchedFindings.length === 1 ? '' : 's'}`);
+    summary = parts.join(' ');
+  }
+
+  return {
+    id: baseId,
+    kind,
+    name: entity.name || baseId,
+    summary,
+    facts: factsRecord,
+    findings: matchedFindings,
+    invoices,
   };
 }

@@ -18,7 +18,11 @@ export interface Engines {
   markovian: Markovian;
 }
 
-export function createEngines(llm?: Partial<Llm>): Engines {
+export interface CreateEnginesOptions {
+  persistDir?: string;
+}
+
+export function createEngines(llm?: Partial<Llm>, opts?: CreateEnginesOptions): Engines {
   // Each engine takes an injected generator — one Nightshift call, swappable in one line.
   const generate = (prompt: string) => (llm?.generate ? llm.generate(prompt) : Promise.resolve('{}'));
 
@@ -28,6 +32,7 @@ export function createEngines(llm?: Partial<Llm>): Engines {
   });
 
   const hmem = new HMEM({
+    persistDir: opts?.persistDir,
     minerFn: async (prompt: string) => {
       try {
         return await generate(prompt);

@@ -9,14 +9,14 @@ import { forecaster } from './forecaster.ts';
 import { cfo } from './cfo.ts';
 import { drafter } from './drafter.ts';
 import { createEngines, type Engines } from '../engines/index.ts';
-import { recordDecision } from '../engines/hmemAdapter.ts';
-import { ingestZetarisData } from '../engines/worldModelAdapter.ts';
+import { deleteMemory, listMemories, recordDecision } from '../engines/hmemAdapter.ts';
+import { getEntity360, ingestZetarisData } from '../engines/worldModelAdapter.ts';
 import { countEntities, fetchEntityRows } from '../zetaris/entitySql.ts';
 import { describeChanges, diffRuns, type RunDiff } from './changes.ts';
 
 export interface RunChanges extends RunDiff { previous_run_id: string | null }
 import type {
-  ActionDraft, AgentContext, Brief, Explanation, Finding, Forecast, Llm, Move, RunStatus, RunStep, Scenario,
+  ActionDraft, AgentContext, Brief, Entity360, Explanation, Finding, Forecast, Llm, Memory, Move, RunStatus, RunStep, Scenario,
 } from './types.ts';
 
 export interface Agents { leakHunter: typeof leakHunter; explainer: typeof explainer; forecaster: typeof forecaster; cfo: typeof cfo }
@@ -28,6 +28,7 @@ export interface OrchestratorDeps {
   agents?: Partial<Agents>;
   now?: () => Date;
   engines?: Engines;
+  hmemPersistDir?: string;
   /** Model used when a call names none (Nightshift's METERLESS_MODEL); only for llm_call trace lines. */
   model?: string;
   deepModel?: string;
@@ -74,7 +75,8 @@ const DEFAULT_QUESTION = 'Why did my margin drop in September?';
 export function createOrchestrator(deps: OrchestratorDeps) {
   const agents: Agents = { leakHunter, explainer, forecaster, cfo, ...deps.agents };
   const llm = traceLlm(deps.llm, deps.model);
-  const engines = deps.engines ?? createEngines(llm);
+  const hmemDir = deps.hmemPersistDir ?? (deps.logsDir ? join(deps.logsDir, 'hmem') : undefined);
+  const engines = deps.engines ?? createEngines(llm, { persistDir: hmemDir });
   const now = deps.now ?? (() => new Date());
   const runs = new Map<string, RunStatus>();
   const done = new Map<string, Promise<RunStatus>>();
@@ -240,6 +242,21 @@ export function createOrchestrator(deps: OrchestratorDeps) {
       const move = brief.moves.find(m => m.id === moveId);
       if (!move) throw new NotFoundError(`move ${moveId} not found`);
       return runAgent(brief.run_id, 'cfo', ctx => drafter({ move, findings, ctx }));
+    },
+    memories(): Memory[] {
+      return engines?.hmem ? listMemories(engines.hmem) : [];
+    },
+    deleteMemory(id: string): void {
+      if (!engines?.hmem) throw new NotFoundError(`memory ${id} not found`);
+      const deleted = deleteMemory(engines.hmem, id);
+      if (!deleted) throw new NotFoundError(`memory ${id} not found`);
+    },
+    entity(id: string): Entity360 {
+      if (!engines?.worldModel) throw new NotFoundError(`entity ${id} not found`);
+      const findings = current ? current.findings : [];
+      const e = getEntity360(engines.worldModel, id, findings);
+      if (!e) throw new NotFoundError(`entity ${id} not found`);
+      return e;
     },
     engines,
   };

@@ -88,6 +88,13 @@ export function buildServer({ orchestrator: o, checks, webDir }: ServerDeps): Fa
     async req => o.decide(req.params.id, req.body.decision, req.body.note ?? null));
 
   app.post<{ Params: { id: string } }>('/api/moves/:id/draft', async req => o.draft(req.params.id));
+  app.get('/api/memories', async () => o.memories());
+  app.delete<{ Params: { id: string } }>('/api/memories/:id', async (req, reply) => {
+    o.deleteMemory(req.params.id);
+    return reply.status(204).send();
+  });
+
+  app.get<{ Params: { id: string } }>('/api/entities/:id', async req => o.entity(req.params.id));
 
   return app;
 }

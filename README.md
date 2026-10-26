@@ -14,13 +14,41 @@ Ledger Lens is an AI finance team that finds those leaks for her. Four agents re
 | **CFO** | Picks three moves with EUR amounts (Nemotron Ultra). H-MEM remembers what Sara approved or rejected and adjusts the ranking, with a visible `memory_note` (the "memory moment"). |
 | **Dashboard** | Brief, findings with evidence, forecast and what-ifs, approve / reject. Status dots show whether Zetaris and Nightshift are live. |
 | **Traces** | Every run writes `logs/<run_id>.jsonl`: each agent step and model call. |
-| **Evals** | `evals/check_findings.py` compares the findings with the answer key: **6/6 found, 0 false alarms**. 128 backend tests pass. |
+| **Evals** | `evals/check_findings.py` compares the findings with the answer key: **6/6 found, 0 false alarms**. 163 backend tests pass. |
 
 **Known limits**
 
-- H-MEM memories live in memory, so restarting the backend forgets past decisions.
 - Nightshift is a desktop app (Windows / macOS). Without it, the agents fall back to deterministic answers: the leaks and numbers are the same, but the wording is fixed.
 - A live run with Nemotron takes about 1.5 to 4 minutes.
+
+## Screenshots
+
+From a live run (Zetaris views, Nemotron through Nightshift), 26 Oct 2026.
+
+**Morning brief:** cash today, monthly leak recovery, and the three moves ranked by the CFO agent.
+
+![Morning brief](docs/screenshots/brief.png)
+
+**Leaks:** the six findings from the SQL checks, with their monthly cost and cash at risk.
+
+![Leaks](docs/screenshots/leaks.png)
+
+**Evidence:** every finding opens the exact SQL it ran on a Zetaris view and the rows it returned.
+
+![Evidence drawer for the Nordwind late payer](docs/screenshots/leaks-evidence.png)
+
+**Forecast and what-if:** six months of cash computed in code; here, losing Nordwind Studio costs €14,400.
+
+![Forecast with the lose-a-client what-if](docs/screenshots/forecast-whatif.png)
+
+**Zetaris:** the `ledger_lens_pg` source with its five tables, and the `client_profitability` view returning Atlas Co's unbilled hours.
+
+![Zetaris data sources](docs/screenshots/zetaris-sources.png)
+![Zetaris view query](docs/screenshots/zetaris-view.png)
+
+**Nightshift:** the two NVIDIA Nemotron lanes the agents use, Ultra 550B (deep) and Lightning 30B (fast).
+
+![Nightshift Nemotron lanes](docs/screenshots/nightshift-models.png)
 
 ## Architecture
 

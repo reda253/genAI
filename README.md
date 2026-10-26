@@ -162,6 +162,22 @@ Every variable in [.env.example](.env.example). All are optional for Level 1.
 
 Submission details: [metadata.json](metadata.json).
 
+## How the agents reason
+
+Ledger Lens guarantees financial truthfulness through a multi-tier reasoning pipeline:
+
+1. **Deterministic SQL Detection:** Fixed SQL queries over the 4 Zetaris views (client_profitability, cash_position, subscription_usage, r_aging) detect anomalies (unbilled hours, price rises > 15%, inactive subscriptions > 60 days, overdue invoices > 30 days, underpriced services, duplicate charges). Every claim carries verifiable evidence rows.
+2. **NVIDIA Nemotron Dual Lanes:**
+   - **Fast Lane (
+vidia/nemotron-3.5-lightning-30b-a3b):** Leak Hunter scans and ranks anomalies into structured, typed findings with low latency.
+   - **Deep Lane (
+vidia/nemotron-3-ultra-550b-a55b):** Powers Explainer (bounded Markovian multi-chunk reasoning) and CFO (strategic multi-move ranking) for deep causal thinking.
+3. **Critique & Revision Loop (G1):** When an agent output contains amounts or ids not found in the evidence, a critic step intercepts the response and sends a targeted revision prompt (critique trace event). If the revised reply still fails, deterministic fallbacks ensure runs remain robust and bounded.
+4. **Confidence Escalation (G2):** Findings with confidence below high trigger an Explainer validation query before CFO prioritization (escalated trace event).
+5. **Deterministic Forecast Math:** Cash projections over 6 months and what-if scenarios (lose_client, 
+aise_prices) are computed strictly in TypeScript (orecast_math.ts), never approximated by the LLM.
+6. **Action Drafts (I2):** Move recommendations generate actionable drafts (emails, checklists, invoice lines) for human review, never dispatched automatically.
+
 ## Troubleshooting
 
 | Problem | Fix |

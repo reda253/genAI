@@ -32,6 +32,8 @@ export interface OrchestratorDeps {
   /** Model used when a call names none (Nightshift's METERLESS_MODEL); only for llm_call trace lines. */
   model?: string;
   deepModel?: string;
+  /** DEMO_CRITIC: see AgentContext.demoCritic. */
+  demoCritic?: boolean;
 }
 
 type TraceFn = (event: string, data?: unknown) => void;
@@ -94,7 +96,7 @@ export function createOrchestrator(deps: OrchestratorDeps) {
 
   const ctxFor = (runId: string, step: string | null): AgentContext => {
     const tracer = createTracer(runId, deps.logsDir);
-    return { runId, llm, sql: deps.sql, deepModel: deps.deepModel, trace: (event, data) => tracer.log(step, event, data), engines };
+    return { runId, llm, sql: deps.sql, deepModel: deps.deepModel, trace: (event, data) => tracer.log(step, event, data), engines, demoCritic: deps.demoCritic };
   };
   /** Runs an agent with its model calls (its own and the engines') traced to its step. */
   const runAgent = <T>(runId: string, step: string, fn: (ctx: AgentContext) => Promise<T>): Promise<T> => {

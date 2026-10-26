@@ -165,6 +165,7 @@ Every variable in [.env.example](.env.example). All are optional for Level 1.
 | `METERLESS_RUNTIME_TOKEN` | empty | Token from Nightshift Console (Level 2) |
 | `METERLESS_MODEL` | `nvidia/nemotron-3.5-lightning-30b-a3b` | Fast model (Leak Hunter) |
 | `METERLESS_DEEP_MODEL` | `nvidia/nemotron-3-ultra-550b-a55b` | Deep model (Explainer, CFO) |
+| `DEMO_CRITIC` | `0` | Demo only. `1` puts one invented amount (€3,170.45) in the Explainer's first answer, so the critic loop visibly catches it and Nemotron revises. The trace and the timeline mark it "injected by DEMO_CRITIC" |
 | `DOCKER_METERLESS_BASE_URL` | `http://host.docker.internal:8088/v1` | Nightshift as seen from the app container |
 | `DOCKER_ZETARIS_REST_URL` | `http://host.docker.internal:8888/api/v1.0` | Zetaris as seen from the app container |
 | `POSTGRES_HOST` | `localhost` | Postgres host for the native loader |

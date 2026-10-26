@@ -47,6 +47,24 @@ export function groundCauses(raw: unknown, findings: Finding[]): { causes: Cause
   return { causes, ungrounded };
 }
 
+/** Not in any evidence row: the demo switch puts it in the model's first answer for the critic to catch. */
+export const DEMO_INVENTED_AMOUNT = 3170.45;
+
+/**
+ * DEMO_CRITIC=1 only: replaces the first cause's amount with an invented one, so a demo can show the
+ * G1 critic catching it and the model revising. The trace marks it as injected; off by default.
+ */
+export function injectDemoAmount(raw: string): string {
+  try {
+    const parsed = extractJson(raw) as { causes?: { amount_eur?: unknown }[] };
+    if (!Array.isArray(parsed?.causes) || !parsed.causes.length) return raw;
+    parsed.causes[0].amount_eur = DEMO_INVENTED_AMOUNT;
+    return JSON.stringify(parsed);
+  } catch {
+    return raw;
+  }
+}
+
 export async function explainer(
   ctx: AgentContext,
   input: { question: string; finding_id: string | null; findings: Finding[] },
@@ -74,7 +92,10 @@ export async function explainer(
   /** G1: One critique-revise round if amounts were ungrounded. */
   const handleCritique = async (initialRaw: string, ungrounded: number[], history: ChatMessage[]): Promise<Explanation | null> => {
     if (ungrounded.length === 0) return null;
-    const problems = ungrounded.map(n => `ungrounded amount: ${n} EUR`);
+    const problems = ungrounded.map(n =>
+      `ungrounded amount: ${n} EUR${demo && n === DEMO_INVENTED_AMOUNT ? ' (injected by DEMO_CRITIC)' : ''}`);
+    const trace = (revised: boolean) =>
+      ctx.trace('critique', { agent: 'explainer', problems, revised, ...(demo ? { demo_injected: true } : {}) });
     const critiquePrompt = `These amounts are not in the evidence rows: ${ungrounded.join(', ')} EUR. Revise using only the evidence. Return strict JSON matching the Explanation schema.`;
     try {
       const revisedRaw = await ctx.llm.chat([
@@ -85,18 +106,22 @@ export async function explainer(
 
       const revised = parseAnswer(revisedRaw);
       if (revised.explanation && revised.ungrounded.length === 0) {
-        ctx.trace('critique', { agent: 'explainer', problems, revised: true });
+        trace(true);
         return { ...revised.explanation, uncertain: false, uncertainty_note: null };
       }
-      ctx.trace('critique', { agent: 'explainer', problems, revised: false });
+      trace(false);
       return revised.explanation
         ? { ...revised.explanation, uncertain: true, uncertainty_note: `Amounts not found in the evidence rows: ${revised.ungrounded.length ? revised.ungrounded.join(', ') : ungrounded.join(', ')} EUR.` }
         : null;
     } catch {
-      ctx.trace('critique', { agent: 'explainer', problems, revised: false });
+      trace(false);
       return null;
     }
   };
+
+  // DEMO_CRITIC: only the run's main explanation, only the model's first answer
+  const demo = ctx.demoCritic === true && !input.finding_id;
+  const firstAnswer = (raw: string) => (demo ? injectDemoAmount(raw) : raw);
 
   // 1. Markovian engine: bounded multi-chunk investigation on the deep lane; its final JSON answer is grounded
   if (ctx.engines?.markovian) {
@@ -108,10 +133,11 @@ export async function explainer(
         generator: prompt => ctx.llm.chat([{ role: 'user', content: prompt }], { model: ctx.deepModel }),
       });
       ctx.trace('markovian_done', { chunks: inv.chunkCount, tokens: inv.tokensProcessed });
-      const parsed = parseAnswer(inv.output);
+      const output = firstAnswer(inv.output);
+      const parsed = parseAnswer(output);
       if (parsed.explanation) {
         if (parsed.ungrounded.length > 0) {
-          const revised = await handleCritique(inv.output, parsed.ungrounded, [
+          const revised = await handleCritique(output, parsed.ungrounded, [
             { role: 'system', content: loadPrompt('explainer') },
             { role: 'user', content: `Question: ${JSON.stringify(input.question)}\nFindings: ${JSON.stringify(relevantFindings, null, 2)}` },
           ]);
@@ -147,7 +173,7 @@ and amount_eur must be a number that appears in that finding (its impact or its 
       { role: 'system', content: loadPrompt('explainer') },
       { role: 'user', content: prompt },
     ];
-    const raw = await ctx.llm.chat(history, { model: ctx.deepModel });
+    const raw = firstAnswer(await ctx.llm.chat(history, { model: ctx.deepModel }));
 
     const parsed = parseAnswer(raw);
     if (parsed.explanation) {

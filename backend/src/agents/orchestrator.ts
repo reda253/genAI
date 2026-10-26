@@ -126,6 +126,32 @@ export function createOrchestrator(deps: OrchestratorDeps) {
         }
         return findings;
       });
+
+      // G2: Branch on confidence - findings with confidence !== 'high' escalated to Explainer before CFO ranks them
+      const lowConfFindings = findings.filter(f => f.confidence !== 'high');
+      if (lowConfFindings.length > 0) {
+        tracer.log('explainer', 'escalated', {
+          finding_ids: lowConfFindings.map(f => f.id),
+          reason: 'low_confidence',
+        });
+        for (const f of lowConfFindings) {
+          try {
+            const check = await runAgent(status.run_id, 'explainer', ctx =>
+              agents.explainer(ctx, {
+                question: `Is finding ${f.id} (${f.title}) supported by its evidence?`,
+                finding_id: f.id,
+                findings,
+              })
+            );
+            if (check.uncertain) {
+              f.title = `${f.title} (unconfirmed: ${check.uncertainty_note ?? 'insufficient evidence'})`;
+            }
+          } catch {
+            // non-blocking
+          }
+        }
+      }
+
       const explanation = await step('explainer', ctx => agents.explainer(ctx, { question: DEFAULT_QUESTION, finding_id: null, findings }));
       const forecast = await step('forecaster', ctx => agents.forecaster(ctx, { type: 'baseline' }));
       const brief = await step('cfo', ctx => agents.cfo(ctx, { findings, forecast, explanation }));

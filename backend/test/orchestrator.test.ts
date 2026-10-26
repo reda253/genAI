@@ -198,3 +198,14 @@ test('changes() before any run is empty, not an error', () => {
   const { o } = make();
   expect(o.changes()).toEqual({ previous_run_id: null, new: [], resolved: [], changed: [] });
 });
+
+test('G2: a medium-confidence finding triggers the Explainer escalation step and traces escalated', async () => {
+  const { o, logsDir } = make();
+  const { run_id } = o.startRun();
+  await o.wait(run_id);
+  const lines = readTrace(logsDir, run_id);
+  const escalated = lines.find(l => l.event === 'escalated');
+  expect(escalated).toBeDefined();
+  expect(escalated?.step).toBe('explainer');
+  expect(escalated?.data).toMatchObject({ finding_ids: ['f005'], reason: 'low_confidence' });
+});

@@ -74,6 +74,26 @@ export interface Move {
   status: MoveStatus;
 }
 
+export interface Memory {
+  id: string;
+  text: string;
+  decision: 'approve' | 'reject';
+  action_type: ActionType | string;
+  created_at: string;
+}
+
+export interface Entity360 {
+  id: string;
+  kind: 'client' | 'subscription';
+  name: string;
+  summary: string;
+  facts: Record<string, string | number>;
+  findings: Finding[];
+  invoices: Record<string, unknown>[];
+}
+
+export type Entity = Entity360;
+
 export interface Brief {
   run_id: string;
   generated_at: string;

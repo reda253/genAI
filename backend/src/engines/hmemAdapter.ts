@@ -1,7 +1,5 @@
-// H-MEM adapter for Ledger Lens — stores user decisions (approve/reject)
-// and injects memory context to influence CFO move ranking.
 import type { HMEM, MemoryRecord, QueryResult } from './hmem/index.ts';
-import type { Move } from '../agents/types.ts';
+import type { Memory, Move } from '../agents/types.ts';
 
 export interface DecisionRecord {
   moveId: string;
@@ -100,4 +98,27 @@ export function applyMemoriesToMoves(
 
   // Re-assign ranks 1..N
   return updatedMoves.map((m, idx) => ({ ...m, rank: idx + 1 }));
+}
+
+export function listMemories(hmem: HMEM): Memory[] {
+  const records = hmem.store.all().filter(r => r.tags?.includes('decision'));
+  records.sort((a, b) => b.timestamp - a.timestamp);
+  return records.map(r => {
+    const decision = (r.tags?.includes('reject') ? 'reject' : 'approve') as 'approve' | 'reject';
+    const actionType = r.tags?.find(t => t !== 'decision' && t !== 'approve' && t !== 'reject') || 'unknown';
+    return {
+      id: r.id,
+      text: r.content,
+      decision,
+      action_type: actionType,
+      created_at: new Date(r.timestamp).toISOString(),
+    };
+  });
+}
+
+export function deleteMemory(hmem: HMEM, id: string): boolean {
+  const record = hmem.store.get(id);
+  if (!record) return false;
+  hmem.store.delete(id, 'user_requested_forget');
+  return true;
 }

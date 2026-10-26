@@ -124,6 +124,8 @@ export interface AgentContext {
   /** Deep Nemotron lane for reasoning-heavy agents (Explainer, CFO); undefined = provider default. */
   deepModel?: string;
   engines?: import('../engines/index.ts').Engines;
+  /** DEMO_CRITIC=1: inject one invented amount into the Explainer's first answer (demo of the G1 critic). */
+  demoCritic?: boolean;
 }
 
 export interface ActionDraft {

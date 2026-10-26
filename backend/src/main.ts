@@ -26,7 +26,9 @@ const orchestrator = createOrchestrator({
   sql: zetaris.querySql,
   model: config.meterless.model,
   deepModel: config.meterless.deepModel,
+  demoCritic: config.demoCritic,
 });
+if (config.demoCritic) console.log('DEMO_CRITIC=1: the Explainer\'s first answer gets one invented amount for the critic to catch');
 
 const app = buildServer({
   orchestrator,

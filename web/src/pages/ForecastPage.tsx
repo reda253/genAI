@@ -20,6 +20,8 @@ import {
 } from 'recharts';
 import type { Forecast, Scenario } from '../types';
 
+const CLIENT_NAMES: Record<string, string> = { c01: 'Atlas Co', c04: 'Nordwind Studio', c07: 'Kestrel Books' };
+
 interface ForecastPageProps {
   baselineForecast: Forecast | null;
   loading: boolean;
@@ -187,7 +189,11 @@ export const ForecastPage: React.FC<ForecastPageProps> = ({
             <UserX className="w-4 h-4 text-rose-400 ml-1.5" />
             <select
               value={selectedClient}
-              onChange={(e) => setSelectedClient(e.target.value)}
+              onChange={(e) => {
+                // a shown loss belongs to the previous client: clear it so label and chart never disagree
+                setSelectedClient(e.target.value);
+                if (activeScenarioType === 'lose_client') handleReset();
+              }}
               className="bg-transparent text-xs text-white border-none focus:outline-none pr-2 font-medium cursor-pointer"
             >
               <option value="c01" className="bg-slate-900">Atlas Co (c01)</option>
@@ -252,8 +258,10 @@ export const ForecastPage: React.FC<ForecastPageProps> = ({
               Cash Balance Trajectory (Oct 2026 – Mar 2027)
             </h3>
             <p className="text-xs text-slate-400">
-              {scenarioForecast
-                ? `Comparing baseline runway against '${activeScenarioType.replace('_', ' ')}'`
+              {scenarioForecast && activeScenarioType === 'lose_client'
+                ? `Baseline vs losing ${CLIENT_NAMES[selectedClient] ?? selectedClient}`
+                : scenarioForecast && activeScenarioType === 'raise_prices'
+                ? `Baseline vs raising prices by ${priceHikePct}%`
                 : 'Projected baseline runway without client churn'}
             </p>
           </div>
@@ -261,7 +269,7 @@ export const ForecastPage: React.FC<ForecastPageProps> = ({
           {activeScenarioType === 'lose_client' && (
             <div className="badge-rose text-xs">
               <AlertTriangle className="w-3.5 h-3.5" />
-              Warning: Runway reduced if {selectedClient} churns
+              Warning: Runway reduced if {CLIENT_NAMES[selectedClient] ?? selectedClient} churns
             </div>
           )}
           {activeScenarioType === 'raise_prices' && (

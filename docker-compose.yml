@@ -25,6 +25,7 @@ services:
       HOST: 0.0.0.0
       # localhost inside the container is the container: reach host services instead.
       ZETARIS_MOCK: ${ZETARIS_MOCK:-1}
+      DEMO_CRITIC: ${DEMO_CRITIC:-0}
       METERLESS_BASE_URL: ${DOCKER_METERLESS_BASE_URL:-http://host.docker.internal:8088/v1}
       ZETARIS_REST_URL: ${DOCKER_ZETARIS_REST_URL:-http://host.docker.internal:8888/api/v1.0}
     extra_hosts: ["host.docker.internal:host-gateway"]

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { explainer, extractJson } from '../src/agents/explainer.ts';
+import { DEMO_INVENTED_AMOUNT, explainer, extractJson } from '../src/agents/explainer.ts';
 import { findings } from '../src/agents/fixtures.ts';
 import type { AgentContext } from '../src/agents/types.ts';
 import { fakeLlm, scriptedLlm } from './helpers.ts';
@@ -138,6 +138,35 @@ describe('explainer agent', () => {
 
     expect(result.causes).toHaveLength(1);
     expect(result.causes[0].finding_id).toBe('f002');
+  });
+
+  it('DEMO_CRITIC: a grounded first answer gets an invented amount, the critic catches it, and the trace says so', async () => {
+    const grounded = JSON.stringify({
+      summary: 'Grounded.',
+      causes: [{ rank: 1, cause: 'Unbilled Atlas', amount_eur: 1320, finding_id: 'f002' }],
+      uncertain: false,
+    });
+    const calls: unknown[] = [];
+    const llm = { ...scriptedLlm(grounded).llm, chat: async (messages: unknown) => { calls.push(messages); return grounded; } };
+    const events: { event: string; data?: any }[] = [];
+    const ctx: AgentContext = {
+      runId: 'r', llm, deepModel: 'deep-x', demoCritic: true,
+      sql: () => Promise.reject(new Error('no')), trace: (event, data) => events.push({ event, data }),
+    };
+
+    const result = await explainer(ctx, { question: 'Why?', finding_id: null, findings });
+    expect(result.causes[0].amount_eur).toBe(1320);
+    expect(result.uncertain).toBe(false);
+    expect(calls).toHaveLength(2); // the revision really goes back to the model
+    expect(JSON.stringify(calls[1])).toContain(String(DEMO_INVENTED_AMOUNT));
+    const critique = events.find(e => e.event === 'critique');
+    expect(critique?.data).toMatchObject({ agent: 'explainer', revised: true, demo_injected: true });
+    expect(critique?.data.problems[0]).toMatch(/injected by DEMO_CRITIC/);
+
+    // per-finding questions (G2 checks, "Why?" on one finding) are never touched
+    events.length = 0;
+    await explainer(ctx, { question: 'Is f002 supported?', finding_id: 'f002', findings });
+    expect(events.some(e => e.event === 'critique')).toBe(false);
   });
 
   it('G1: critiques ungrounded amounts and accepts revised grounded answer', async () => {

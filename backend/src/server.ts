@@ -87,5 +87,7 @@ export function buildServer({ orchestrator: o, checks, webDir }: ServerDeps): Fa
     '/api/moves/:id/decision', { schema: { body: decisionBody } },
     async req => o.decide(req.params.id, req.body.decision, req.body.note ?? null));
 
+  app.post<{ Params: { id: string } }>('/api/moves/:id/draft', async req => o.draft(req.params.id));
+
   return app;
 }

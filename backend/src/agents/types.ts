@@ -105,3 +105,11 @@ export interface AgentContext {
   deepModel?: string;
   engines?: import('../engines/index.ts').Engines;
 }
+
+export interface ActionDraft {
+  move_id: string;
+  kind: 'email' | 'steps' | 'invoice_lines';
+  subject: string | null;
+  body: string;
+  ungrounded: number[];
+}

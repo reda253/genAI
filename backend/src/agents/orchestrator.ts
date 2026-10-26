@@ -7,6 +7,7 @@ import { leakHunter } from './leakHunter.ts';
 import { explainer } from './explainer.ts';
 import { forecaster } from './forecaster.ts';
 import { cfo } from './cfo.ts';
+import { drafter } from './drafter.ts';
 import { createEngines, type Engines } from '../engines/index.ts';
 import { recordDecision } from '../engines/hmemAdapter.ts';
 import { ingestZetarisData } from '../engines/worldModelAdapter.ts';
@@ -15,7 +16,7 @@ import { describeChanges, diffRuns, type RunDiff } from './changes.ts';
 
 export interface RunChanges extends RunDiff { previous_run_id: string | null }
 import type {
-  AgentContext, Brief, Explanation, Finding, Forecast, Llm, Move, RunStatus, RunStep, Scenario,
+  ActionDraft, AgentContext, Brief, Explanation, Finding, Forecast, Llm, Move, RunStatus, RunStep, Scenario,
 } from './types.ts';
 
 export interface Agents { leakHunter: typeof leakHunter; explainer: typeof explainer; forecaster: typeof forecaster; cfo: typeof cfo }
@@ -207,6 +208,12 @@ export function createOrchestrator(deps: OrchestratorDeps) {
         recordDecision(engines.hmem, move, decision, note);
       }
       return { ...move };
+    },
+    async draft(moveId: string): Promise<ActionDraft> {
+      const { brief, findings } = latest();
+      const move = brief.moves.find(m => m.id === moveId);
+      if (!move) throw new NotFoundError(`move ${moveId} not found`);
+      return runAgent(brief.run_id, 'cfo', ctx => drafter({ move, findings, ctx }));
     },
     engines,
   };

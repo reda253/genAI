@@ -24,6 +24,7 @@ interface NavbarProps {
   currency: Currency;
   onToggleCurrency: (c: Currency) => void;
   onTriggerRun: () => void;
+  findingsCount?: number;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -35,6 +36,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   currency,
   onToggleCurrency,
   onTriggerRun,
+  findingsCount = 6,
 }) => {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
 
@@ -83,7 +85,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <Search className="w-3.5 h-3.5 text-rose-400" />
               <span>Leaks</span>
               <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-rose-500/15 text-rose-300 font-bold">
-                6
+                {findingsCount}
               </span>
             </button>
 

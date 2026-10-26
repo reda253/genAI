@@ -14,12 +14,14 @@ interface LeaksPageProps {
   findings: Finding[];
   loading: boolean;
   onInspectFinding: (finding: Finding) => void;
+  onOpenEntity?: (entityId: string) => void;
 }
 
 export const LeaksPage: React.FC<LeaksPageProps> = ({
   findings,
   loading,
   onInspectFinding,
+  onOpenEntity,
 }) => {
   const [filterType, setFilterType] = useState<LeakType | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -203,6 +205,7 @@ export const LeaksPage: React.FC<LeaksPageProps> = ({
             key={finding.id}
             finding={finding}
             onInspect={onInspectFinding}
+            onOpenEntity={onOpenEntity}
           />
         ))}
       </div>

@@ -1,14 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { X, Check, Copy, Database, Calendar, ShieldCheck, Terminal } from 'lucide-react';
+import { X, Check, Copy, Database, Calendar, ShieldCheck, Terminal, Building2, CreditCard } from 'lucide-react';
 import type { Evidence, Finding } from '../types';
 
 interface EvidenceDrawerProps {
   finding: Finding | null;
   isOpen: boolean;
   onClose: () => void;
+  onOpenEntity?: (entityId: string) => void;
 }
 
-export const EvidenceDrawer: React.FC<EvidenceDrawerProps> = ({ finding, isOpen, onClose }) => {
+export const EvidenceDrawer: React.FC<EvidenceDrawerProps> = ({
+  finding,
+  isOpen,
+  onClose,
+  onOpenEntity,
+}) => {
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   // Close on Escape key
@@ -21,6 +27,8 @@ export const EvidenceDrawer: React.FC<EvidenceDrawerProps> = ({ finding, isOpen,
   }, [isOpen, onClose]);
 
   if (!isOpen || !finding) return null;
+
+  const entityId = finding.client_id || finding.subscription_id;
 
   const handleCopySql = (sql: string, id: string) => {
     navigator.clipboard.writeText(sql);
@@ -41,7 +49,7 @@ export const EvidenceDrawer: React.FC<EvidenceDrawerProps> = ({ finding, isOpen,
           {/* Header */}
           <div className="p-6 border-b border-slate-800 flex items-start justify-between bg-slate-925/80">
             <div>
-              <div className="flex items-center gap-2 mb-2">
+              <div className="flex flex-wrap items-center gap-2 mb-2">
                 <span className="badge-indigo text-[11px] font-mono tracking-wider">
                   FINDING {finding.id.toUpperCase()}
                 </span>
@@ -57,6 +65,21 @@ export const EvidenceDrawer: React.FC<EvidenceDrawerProps> = ({ finding, isOpen,
                   <ShieldCheck className="w-3 h-3 inline mr-1" />
                   {finding.confidence.toUpperCase()} CONFIDENCE
                 </span>
+
+                {entityId && onOpenEntity && (
+                  <button
+                    onClick={() => onOpenEntity(entityId)}
+                    className="inline-flex items-center gap-1.5 text-xs font-mono px-2.5 py-0.5 rounded bg-slate-800 hover:bg-slate-750 text-emerald-300 border border-slate-700 transition-colors cursor-pointer"
+                    title="View Entity 360 in World Model"
+                  >
+                    {finding.client_id ? (
+                      <Building2 className="w-3 h-3 text-emerald-400" />
+                    ) : (
+                      <CreditCard className="w-3 h-3 text-purple-400" />
+                    )}
+                    <span>360 Profile ({entityId})</span>
+                  </button>
+                )}
               </div>
               <h2 className="text-xl font-semibold text-white tracking-tight">{finding.title}</h2>
             </div>

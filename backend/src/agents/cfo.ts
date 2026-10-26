@@ -102,10 +102,15 @@ function mapFindingToAction(f: Finding): { action_type: ActionType; urgency: Urg
 
 export async function cfo(
   ctx: AgentContext,
-  input: { findings: Finding[]; forecast: Forecast; explanation: Explanation },
+  input: {
+    findings: Finding[]; forecast: Forecast; explanation: Explanation;
+    /** G2: finding id -> why the Explainer could not confirm it from its evidence. */
+    unconfirmed?: Record<string, string>;
+  },
 ): Promise<Brief> {
   const nowIso = new Date().toISOString();
-  const cashToday = input.forecast?.start_balance ?? 8420.00;
+  const cashToday = input.forecast.start_balance; // latest balance from cash_position, via the Forecaster
+  const unconfirmed = input.unconfirmed ?? {};
   let brief: Brief | null = null;
 
   try {
@@ -118,7 +123,8 @@ ${JSON.stringify(input.explanation, null, 2)}
 
 Produce a Morning Brief in strict JSON format with exactly 3 prioritized moves.
 Rules: action_type must be one of ${ACTIONS.join(', ')}. urgency must be one of ${URGENCIES.join(', ')}.
-finding_ids must only contain ids from the findings above.
+finding_ids must only contain ids from the findings above.${Object.keys(unconfirmed).length ? `
+Not confirmed by their evidence (rank them lower): ${Object.entries(unconfirmed).map(([id, why]) => `${id} (${why})`).join('; ')}` : ''}
 {
   "run_id": "${ctx.runId}",
   "generated_at": "${nowIso}",
@@ -232,6 +238,12 @@ finding_ids must only contain ids from the findings above.
       moves,
       findings_count: input.findings.length,
     };
+  }
+
+  // G2: whatever the model wrote, a move built on an unconfirmed finding says so
+  for (const m of brief.moves) {
+    const doubts = m.finding_ids.filter(id => unconfirmed[id]).map(id => `${id}: ${unconfirmed[id]}`);
+    if (doubts.length) m.reason = `${m.reason} Not confirmed by the evidence (${doubts.join('; ')}).`.trim();
   }
 
   // P4 H-MEM: apply user decision memories to adjust move ranking and memory_note

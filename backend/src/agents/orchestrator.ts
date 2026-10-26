@@ -130,6 +130,8 @@ export function createOrchestrator(deps: OrchestratorDeps) {
       });
 
       // G2: Branch on confidence - findings with confidence !== 'high' escalated to Explainer before CFO ranks them
+      // The Explainer's doubts go to the CFO, which notes them in the move's reason; findings stay untouched.
+      const unconfirmed: Record<string, string> = {};
       const lowConfFindings = findings.filter(f => f.confidence !== 'high');
       if (lowConfFindings.length > 0) {
         tracer.log('explainer', 'escalated', {
@@ -145,9 +147,7 @@ export function createOrchestrator(deps: OrchestratorDeps) {
                 findings,
               })
             );
-            if (check.uncertain) {
-              f.title = `${f.title} (unconfirmed: ${check.uncertainty_note ?? 'insufficient evidence'})`;
-            }
+            if (check.uncertain) unconfirmed[f.id] = check.uncertainty_note ?? 'insufficient evidence';
           } catch {
             // non-blocking
           }
@@ -156,7 +156,7 @@ export function createOrchestrator(deps: OrchestratorDeps) {
 
       const explanation = await step('explainer', ctx => agents.explainer(ctx, { question: DEFAULT_QUESTION, finding_id: null, findings }));
       const forecast = await step('forecaster', ctx => agents.forecaster(ctx, { type: 'baseline' }));
-      const brief = await step('cfo', ctx => agents.cfo(ctx, { findings, forecast, explanation }));
+      const brief = await step('cfo', ctx => agents.cfo(ctx, { findings, forecast, explanation, unconfirmed }));
       // I7: diff against the previous saved run; its lines replace the model's what_changed.
       const prev = previousRun(status.run_id);
       const diff = diffRuns(prev?.result.findings ?? [], findings);

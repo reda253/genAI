@@ -22,6 +22,22 @@ describe('drafter agent (I2 Action drafts)', () => {
     expect(nums).toContain(47);
   });
 
+  it('ignores list markers and reads thousands separators as one number', () => {
+    const text = '1. Log in.\n2) Cancel the plan.\n3. Save 1,250.50 EUR';
+    expect(extractNumbersFromText(text)).toEqual([1250.5]);
+  });
+
+  it('accepts a numbered steps draft quoting a date from the evidence', async () => {
+    const date = Object.values(findings.find(f => f.id === moveCancel.finding_ids[0])!.evidence[0].rows[0])
+      .find(v => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}/.test(v)) as string | undefined;
+    const body = `1. Log in to Webflow.\n2. Cancel the plan${date ? ` (last used ${date})` : ''}.\n3. Confirm the 29 EUR/month saving.`;
+    const { llm } = scriptedLlm(JSON.stringify({ kind: 'steps', subject: null, body }));
+    const ctx: AgentContext = { runId: 'r', llm, deepModel: 'deep-x', sql: () => Promise.reject(new Error('no')), trace: () => {} };
+
+    const draft = await drafter({ move: moveCancel, findings, ctx });
+    expect(draft).toMatchObject({ kind: 'steps', body });
+  });
+
   it('returns default template when Nightshift is offline', async () => {
     const ctx: AgentContext = {
       runId: 'r',

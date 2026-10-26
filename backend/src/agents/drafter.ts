@@ -26,6 +26,9 @@ export function extractAllowedNumbers(move: Move, findings: Finding[]): Set<numb
         for (const val of Object.values(row)) {
           if (typeof val === 'number' && Number.isFinite(val)) {
             allowed.add(Math.round(val * 100) / 100);
+          } else if (typeof val === 'string') {
+            // dates and other text in the evidence ("2026-09-15") may be quoted as-is
+            for (const n of extractNumbersFromText(val)) allowed.add(n);
           }
         }
       }
@@ -34,11 +37,17 @@ export function extractAllowedNumbers(move: Move, findings: Finding[]): Set<numb
   return allowed;
 }
 
-/** Extracts monetary and numerical values (> 0) from draft text to verify grounding. */
+/**
+ * Extracts monetary and numerical values (> 0) from draft text to verify grounding.
+ * List markers ("1." or "2)" at line start) are not values; "1,250.50" is one number, not two.
+ */
 export function extractNumbersFromText(text: string): number[] {
-  const matches = text.match(/\b\d+(?:\.\d{1,2})?\b/g);
+  const unlisted = text.replace(/^\s*\d+[.)]\s/gm, '');
+  const matches = unlisted.match(/\b\d{1,3}(?:,\d{3})+(?:\.\d{1,2})?\b|\b\d+(?:\.\d{1,2})?\b/g);
   if (!matches) return [];
-  return matches.map(Number).filter(n => Number.isFinite(n) && n > 0);
+  return matches
+    .map(m => Math.round(Number(m.replace(/,/g, '')) * 100) / 100)
+    .filter(n => Number.isFinite(n) && n > 0);
 }
 
 /** Deterministic template fallback when LLM is offline or invents ungrounded numbers. */

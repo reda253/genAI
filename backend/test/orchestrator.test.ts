@@ -209,3 +209,18 @@ test('G2: a medium-confidence finding triggers the Explainer escalation step and
   expect(escalated?.step).toBe('explainer');
   expect(escalated?.data).toMatchObject({ finding_ids: ['f005'], reason: 'low_confidence' });
 });
+
+test('G2: an unconfirmed finding is noted in its move reason, and the finding itself is untouched', async () => {
+  const { o } = make({
+    explainer: async (_ctx: unknown, input: { question: string; finding_id: string | null }) => ({
+      question: input.question, summary: 's', causes: [],
+      uncertain: input.finding_id === 'f005', uncertainty_note: input.finding_id === 'f005' ? 'no rate rows' : null,
+    }),
+  });
+  await o.wait(o.startRun().run_id);
+  const { brief, findings } = o.latest();
+  const move = brief.moves.find(m => m.finding_ids.includes('f005'))!;
+  expect(move.reason).toMatch(/Not confirmed by the evidence \(f005: no rate rows\)/);
+  expect(brief.moves.filter(m => m !== move).every(m => !/Not confirmed/.test(m.reason))).toBe(true);
+  expect(findings.find(f => f.id === 'f005')!.title).not.toMatch(/unconfirmed/);
+});

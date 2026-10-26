@@ -151,10 +151,10 @@ export const RunModal: React.FC<RunModalProps> = ({ isOpen, onClose, onRunComple
   const formatTraceEvent = (line: TraceLine) => {
     switch (line.event) {
       case 'checks_done': {
-        const d = line.data as { count?: number; view?: string };
+        const d = line.data as { ran?: number; failed?: number };
         return {
           icon: <Search className="w-3.5 h-3.5 text-emerald-400" />,
-          title: `${d?.count ?? 6} SQL Checks on Zetaris`,
+          title: `${d?.ran ?? 6} SQL Checks on Zetaris${d?.failed ? ` · ${d.failed} failed` : ''}`,
           subtitle: 'Scanned client_profitability, subscription_usage, ar_aging, cash_position',
           badge: 'ZETARIS',
           badgeClass: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
@@ -185,10 +185,11 @@ export const RunModal: React.FC<RunModalProps> = ({ isOpen, onClose, onRunComple
       }
       case 'critique': {
         const d = line.data as CritiqueData;
+        const n = d?.problems?.length ?? 1;
         return {
           icon: <RefreshCw className="w-3.5 h-3.5 text-amber-400" />,
-          title: `Critic: ${d?.problems?.length ?? 1} ungrounded amount → revised`,
-          subtitle: 'G1 Critic loop detected fabricated number and enforced evidence adherence',
+          title: `Critic (${d?.agent ?? 'agent'}): ${n} problem${n === 1 ? '' : 's'} → ${d?.revised ? 'revised' : 'backup answer used'}`,
+          subtitle: d?.problems?.[0] ?? 'G1 critic loop checked the answer against the evidence',
           badge: 'CRITIC LOOP (G1)',
           badgeClass: 'bg-amber-500/15 text-amber-300 border-amber-500/30',
         };
@@ -212,22 +213,30 @@ export const RunModal: React.FC<RunModalProps> = ({ isOpen, onClose, onRunComple
           badgeClass: 'bg-rose-500/10 text-rose-400 border-rose-500/20',
         };
       }
-      case 'start':
+      case 'world_model_ingested': {
+        const d = line.data as { entities?: number };
         return {
-          icon: <Play className="w-3.5 h-3.5 text-emerald-400" />,
-          title: 'Run Initialized',
-          subtitle: `Session ID ${line.run_id}`,
+          icon: <Sparkles className="w-3.5 h-3.5 text-teal-400" />,
+          title: `World Model · ${d?.entities ?? 0} entities ingested`,
+          subtitle: 'Clients and subscriptions linked to their findings for Client 360',
+          badge: 'METERLESS WORLD MODEL',
+          badgeClass: 'bg-teal-500/10 text-teal-400 border-teal-500/20',
+        };
+      }
+      // start/done mark each agent step, not the whole run
+      case 'start':
+      case 'done': {
+        const label = STEPS.find((s) => s.key === line.step)?.label ?? line.step ?? 'Step';
+        return {
+          icon: line.event === 'start'
+            ? <Play className="w-3.5 h-3.5 text-emerald-400" />
+            : <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />,
+          title: `${label} ${line.event === 'start' ? 'started' : 'finished'}`,
+          subtitle: `Run ${line.run_id}`,
           badge: 'ORCHESTRATOR',
           badgeClass: 'bg-slate-800 text-slate-300 border-slate-700',
         };
-      case 'done':
-        return {
-          icon: <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />,
-          title: 'Run Completed & Views Synchronized',
-          subtitle: 'Brief, Leaks, Forecast and Action Drafts updated',
-          badge: 'SUCCESS',
-          badgeClass: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
-        };
+      }
       default:
         return {
           icon: <Terminal className="w-3.5 h-3.5 text-slate-400" />,

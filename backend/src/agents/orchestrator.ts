@@ -211,7 +211,9 @@ export function createOrchestrator(deps: OrchestratorDeps) {
     },
     latest,
     async explain(question: string, findingId: string | null): Promise<Explanation> {
-      const { findings, brief } = latest();
+      const { findings, brief, explanation } = latest();
+      // the run already answered the default question: no need for a second minute of Nemotron calls
+      if (question === DEFAULT_QUESTION && !findingId) return explanation;
       return runAgent(brief.run_id, 'explainer', ctx => agents.explainer(ctx, { question, finding_id: findingId, findings }));
     },
     async whatIf(scenario: Scenario): Promise<{ baseline: Forecast; scenario: Forecast }> {

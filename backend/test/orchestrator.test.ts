@@ -210,6 +210,22 @@ test('G2: a medium-confidence finding triggers the Explainer escalation step and
   expect(escalated?.data).toMatchObject({ finding_ids: ['f005'], reason: 'low_confidence' });
 });
 
+test("explain() reuses the run's answer to the default question instead of calling the Explainer again", async () => {
+  let calls = 0;
+  const { o } = make({
+    explainer: async (_ctx: unknown, input: { question: string }) => {
+      calls++;
+      return { question: input.question, summary: `answer ${calls}`, causes: [], uncertain: false, uncertainty_note: null };
+    },
+  });
+  await o.wait(o.startRun().run_id);
+  const afterRun = calls;
+  expect((await o.explain('Why did my margin drop in September?', null)).summary).toBe(o.latest().explanation.summary);
+  expect(calls).toBe(afterRun);
+  await o.explain('Why is cash low?', null);
+  expect(calls).toBe(afterRun + 1);
+});
+
 test('G2: an unconfirmed finding is noted in its move reason, and the finding itself is untouched', async () => {
   const { o } = make({
     explainer: async (_ctx: unknown, input: { question: string; finding_id: string | null }) => ({

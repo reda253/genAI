@@ -47,19 +47,20 @@ export const App: React.FC = () => {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [hRes, bRes, fRes, fcRes, expRes] = await Promise.allSettled([
+      // The explanation can be a live model call: load it without holding back the rest of the page.
+      api.explain('Why did my margin drop in September?').then(setExplanation).catch(() => {});
+
+      const [hRes, bRes, fRes, fcRes] = await Promise.allSettled([
         api.getHealth(),
         api.getBrief(),
         api.getFindings(),
         api.getForecast(),
-        api.explain('Why did my margin drop in September?'),
       ]);
 
       if (hRes.status === 'fulfilled') setHealth(hRes.value);
       if (bRes.status === 'fulfilled') setBrief(bRes.value);
       if (fRes.status === 'fulfilled') setFindings(fRes.value);
       if (fcRes.status === 'fulfilled') setForecast(fcRes.value);
-      if (expRes.status === 'fulfilled') setExplanation(expRes.value);
     } finally {
       setLoading(false);
     }
@@ -130,9 +131,12 @@ export const App: React.FC = () => {
   };
 
   // Simulate loss of client from EntityDrawer
+  const [autoLoseClientId, setAutoLoseClientId] = useState<string | null>(null);
+  const clearAutoLoss = useCallback(() => setAutoLoseClientId(null), []);
   const handleSimulateLoss = (clientId: string) => {
+    setAutoLoseClientId(clientId);
     setActiveTab('forecast');
-    showToast(`Simulation configured: losing client ${clientId}`);
+    showToast(`Simulating the loss of client ${clientId}`);
   };
 
   // Custom question for Explainer
@@ -188,6 +192,8 @@ export const App: React.FC = () => {
             baselineForecast={forecast}
             loading={loading}
             onRunWhatIf={handleRunWhatIf}
+            autoLoseClientId={autoLoseClientId}
+            onAutoLossHandled={clearAutoLoss}
           />
         )}
 

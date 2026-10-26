@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   TrendingUp,
   AlertTriangle,
@@ -24,18 +24,35 @@ interface ForecastPageProps {
   baselineForecast: Forecast | null;
   loading: boolean;
   onRunWhatIf: (scenario: Scenario) => Promise<{ baseline: Forecast; scenario: Forecast }>;
+  /** Set by the Client 360 drawer's "Simulate losing" button: run that loss as soon as the page opens. */
+  autoLoseClientId?: string | null;
+  onAutoLossHandled?: () => void;
 }
 
 export const ForecastPage: React.FC<ForecastPageProps> = ({
   baselineForecast,
   loading,
   onRunWhatIf,
+  autoLoseClientId,
+  onAutoLossHandled,
 }) => {
   const [scenarioForecast, setScenarioForecast] = useState<Forecast | null>(null);
   const [activeScenarioType, setActiveScenarioType] = useState<'none' | 'lose_client' | 'raise_prices'>('none');
-  const [selectedClient, setSelectedClient] = useState('c01');
+  const [selectedClient, setSelectedClient] = useState(autoLoseClientId ?? 'c01');
   const [priceHikePct, setPriceHikePct] = useState(10);
   const [isSimulating, setIsSimulating] = useState(false);
+
+  useEffect(() => {
+    if (!autoLoseClientId || loading || !baselineForecast) return;
+    onAutoLossHandled?.();
+    setSelectedClient(autoLoseClientId);
+    setActiveScenarioType('lose_client');
+    setIsSimulating(true);
+    onRunWhatIf({ type: 'lose_client', client_id: autoLoseClientId })
+      .then((res) => setScenarioForecast(res.scenario))
+      .catch(() => {})
+      .finally(() => setIsSimulating(false));
+  }, [autoLoseClientId, loading, baselineForecast, onRunWhatIf, onAutoLossHandled]);
 
   if (loading || !baselineForecast) {
     return (
